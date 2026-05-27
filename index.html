@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<title>Chris · Dashboard</title>
+<style>
+  :root {
+    /* Light palette — soft off-white base, white cards, gold accent
+       preserved as the identity colour. Status colours (green/red)
+       darkened for legibility on white. */
+    --bg: #f7f8fa;          /* soft off-white, not stark */
+    --panel: #ffffff;       /* pure white card surfaces */
+    --panel-2: #f1f3f7;     /* very pale gray for icon chips / input bg */
+    --border: #dde1e8;      /* light visible borders */
+    --border-strong: #c4cad6;
+    --text: #0f172a;        /* deep slate for body text */
+    --muted: #5a6478;       /* medium gray, sufficient contrast on white */
+    --accent: #c9a227;      /* unchanged: Aspire gold */
+    --accent-soft: #fef9e7; /* pale gold for hover/highlight backgrounds */
+    --green: #16a34a;       /* darker than dark-mode green */
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+    /* Two-stop wash gives subtle warm depth on the off-white base. */
+    background:
+      radial-gradient(circle at 25% 15%, #fef9e7 0%, transparent 55%),
+      radial-gradient(circle at 80% 85%, #f0f4ff 0%, transparent 50%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 64px 32px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header .greeting h1 {
+    margin: 0 0 4px 0;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header .greeting h1 .accent { color: var(--accent); }
+  header .greeting .sub {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  header .clock {
+    text-align: right;
+  }
+  header .clock .time {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  header .clock .date {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .tile {
+    /* White card on the off-white background. Light-mode shadow is much
+       softer than the dark-mode equivalent — no inset highlight needed. */
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 2px 8px rgba(15,23,42,0.06);
+  }
+  .tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(201,162,39,0.10) 100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .tile:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15,23,42,0.08), 0 12px 28px rgba(15,23,42,0.10), 0 0 0 1px rgba(201,162,39,0.30);
+  }
+  .tile:hover::before { opacity: 1; }
+  .tile.unconfigured {
+    border-style: dashed;
+    opacity: 0.65;
+  }
+  .tile.unconfigured:hover {
+    opacity: 1;
+    border-style: solid;
+  }
+  .tile-icon {
+    font-size: 22px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+  }
+  .tile h3 {
+    margin: 0 0 6px 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 1;
+  }
+  .tile p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+  }
+  .tile .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+  }
+  .tile .meta .status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tile .meta .status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .tile .meta .status .dot.warn { background: var(--accent); }
+  .tile .meta .status .dot.off { background: var(--muted); }
+  .tile .meta .arrow {
+    color: var(--accent);
+    transition: transform 0.2s;
+  }
+  .tile:hover .meta .arrow { transform: translateX(4px); }
+  .tile-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .tile:hover .tile-actions { opacity: 1; }
+  .icon-btn {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  footer {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  footer a {
+    color: var(--muted);
+    text-decoration: none;
+    margin: 0 12px;
+  }
+  footer a:hover { color: var(--accent); }
+  /* Modal */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    max-width: 540px;
+    width: 100%;
+  }
+  .modal h2 {
+    margin: 0 0 6px 0;
+    font-size: 18px;
+  }
+  .modal p {
+    margin: 0 0 20px 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .modal label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .modal input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    margin-bottom: 16px;
+  }
+  .modal input:focus { outline: none; border-color: var(--accent); }
+  .modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .btn {
+    padding: 10px 18px;
+    background: var(--accent);
+    color: #1a1500;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:hover { background: #d4ae30; }
+  .btn.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn.secondary:hover { background: var(--panel-2); border-color: var(--accent); }
+  .btn.danger { color: var(--red); border: 1px solid var(--border); background: transparent; }
+  .btn.danger:hover { border-color: var(--red); background: rgba(248,113,113,0.06); }
+  .hint {
+    background: var(--panel-2);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .hint code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 11.5px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="greeting">
+      <h1 id="greeting">Welcome back<span class="accent">.</span></h1>
+      <div class="sub" id="subtitle">Loading…</div>
+    </div>
+    <div class="clock">
+      <div class="time" id="clock-time">—</div>
+      <div class="date" id="clock-date">—</div>
+    </div>
+  </header>
+
+  <div class="section-label">Trackers</div>
+  <div class="grid" id="tile-grid"></div>
+
+  <footer>
+    <a href="#" onclick="addCustomTool();return false;">+ Add tool</a>
+    <a href="#" onclick="resetAll();return false;">Reset all paths</a>
+    <a href="#" onclick="showHelp();return false;">Help</a>
+  </footer>
+
+</div>
+
+<div class="modal-bg" id="modal-bg" onclick="if(event.target.id==='modal-bg')closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+/* -------------------- Environment + path helpers ---------- */
+// Detect whether we're loaded from disk (file://) or from the deployed
+// Cloudflare site (https://). Each tile carries both an absolute local
+// path (for the Mac) and a relative web path (for the deployed bundle);
+// pathFor() picks the right one at load time.
+const IS_LOCAL = location.protocol === 'file:';
+const pathFor = (local, web) => IS_LOCAL ? local : web;
+
+/* -------------------- Tools registry -------------------- */
+const DEFAULT_TOOLS = [
+  {
+    id: 'cash-tracker',
+    name: 'Cash Tracker',
+    desc: 'Weekly bank balances and expected cash inflows across all entities.',
+    icon: '£',
+    defaultPath: pathFor(
+      '/Users/chrispaton/Documents/Aspire Cash Tracker/cash-tracker.html',
+      'cash-tracker/index.html'
+    )
+  },
+  {
+    id: 'options-tracker',
+    name: 'Options Tracker',
+    desc: 'Put-selling positions, premium collected, and assignment risk.',
+    icon: '∝',
+    defaultPath: pathFor(
+      '/Users/chrispaton/Documents/Claude/Projects/Options Trading/index.html',
+      'options/index.html'
+    )
+  },
+  {
+    id: 'capital-runway',
+    name: 'Capital Runway Calculator',
+    desc: 'Project cash runway, burn rate, and reserve coverage by month.',
+    icon: '⟶',
+    defaultPath: ''
+  },
+  {
+    id: 'wealth-growth',
+    name: '10-Year Wealth Growth Model',
+    desc: '25-property portfolio long-term value, equity, and yield projection.',
+    icon: '↗',
+    defaultPath: pathFor(
+      '/Users/chrispaton/Downloads/10year-growth-model-v2.html',
+      'wealth-growth/index.html'
+    )
+  },
+  {
+    id: 'kids-tracker',
+    name: 'Kids Money Tracker',
+    desc: 'Pocket money, savings, and an investment pot with growth projections.',
+    icon: '🪙',
+    defaultPath: pathFor(
+      '/Users/chrispaton/Documents/Claude/Projects/Financial Control/kids-tracker/index.html',
+      'kids-tracker/index.html'
+    )
+  }
+];
+const STORAGE_KEY = 'aspireDashboard_v1';
+
+/* -------------------- State -------------------- */
+let tools = [];
+function loadTools() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // merge with defaults so new defaults appear if dashboard is updated
+      tools = DEFAULT_TOOLS.map(d => {
+        const s = saved.find(t => t.id === d.id);
+        // If a saved path is empty (or missing), fall back to the latest defaultPath
+        // so newly-wired-up tools light up automatically without a manual reset.
+        return s
+          ? { ...d, path: s.path && s.path.trim() ? s.path : (d.defaultPath || '') }
+          : { ...d, path: d.defaultPath || '' };
+      });
+      // include any custom-added tools
+      saved.filter(s => !DEFAULT_TOOLS.find(d => d.id === s.id)).forEach(c => tools.push(c));
+    } else {
+      tools = DEFAULT_TOOLS.map(d => ({ ...d, path: d.defaultPath || '' }));
+    }
+  } catch (e) {
+    tools = DEFAULT_TOOLS.map(d => ({ ...d, path: d.defaultPath || '' }));
+  }
+}
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
+}
+
+/* -------------------- Render -------------------- */
+function renderTiles() {
+  const grid = document.getElementById('tile-grid');
+  grid.innerHTML = '';
+  tools.forEach(t => {
+    const configured = !!t.path;
+    const tile = document.createElement('a');
+    tile.className = 'tile' + (configured ? '' : ' unconfigured');
+    if (configured) tile.href = pathToUrl(t.path);
+    else tile.href = '#';
+    tile.onclick = (e) => {
+      if (!configured) {
+        e.preventDefault();
+        configureTool(t.id);
+      }
+    };
+    tile.innerHTML = `
+      <div class="tile-actions">
+        <button class="icon-btn" title="Configure path" onclick="event.preventDefault();event.stopPropagation();configureTool('${t.id}')">⚙</button>
+      </div>
+      <div class="tile-icon">${t.icon}</div>
+      <h3>${escapeHtml(t.name)}</h3>
+      <p>${escapeHtml(t.desc)}</p>
+      <div class="meta">
+        <span class="status">
+          <span class="dot ${configured ? '' : 'off'}"></span>
+          ${configured ? 'Ready' : 'Click to set up'}
+        </span>
+        <span class="arrow">→</span>
+      </div>
+    `;
+    grid.appendChild(tile);
+  });
+}
+
+function pathToUrl(p) {
+  if (/^https?:/.test(p) || /^file:/.test(p)) return p;
+  // Relative paths (no leading slash) — leave as-is so the browser
+  // resolves them against the page's own URL. Works on both file://
+  // and https://.
+  if (!p.startsWith('/')) return p;
+  // Absolute macOS path → file:// URL with proper encoding.
+  // encodeURI is safe for path components but preserves /.
+  return 'file://' + encodeURI(p).replace(/%23/g, '%23'); // leave # encoded if present
+}
+
+/* -------------------- Configure modal -------------------- */
+function configureTool(id) {
+  const t = tools.find(x => x.id === id);
+  if (!t) return;
+  showModal(`
+    <h2>${escapeHtml(t.name)}</h2>
+    <p>Set the file path for this tool. The tile will then open it in one click.</p>
+    <div class="hint">
+      To get a path: in Finder, right-click the file, hold <strong>Option</strong>, and choose <code>Copy "filename" as Pathname</code>. Paste it below.
+    </div>
+    <label>File path or URL</label>
+    <input type="text" id="path-input" placeholder="/Users/chrispaton/Documents/.../tool.html" value="${escapeHtml(t.path || '')}" autofocus />
+    <div class="modal-actions">
+      ${t.id.startsWith('custom-') ? `<button class="btn danger" onclick="removeTool('${t.id}')">Remove tool</button>` : ''}
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="savePath('${t.id}')">Save</button>
+    </div>
+  `);
+  setTimeout(() => document.getElementById('path-input')?.focus(), 50);
+}
+
+function savePath(id) {
+  const t = tools.find(x => x.id === id);
+  if (!t) return;
+  const v = document.getElementById('path-input').value.trim();
+  t.path = v;
+  persist();
+  closeModal();
+  renderTiles();
+}
+
+function removeTool(id) {
+  if (!confirm('Remove this tool from the dashboard?')) return;
+  tools = tools.filter(t => t.id !== id);
+  persist();
+  closeModal();
+  renderTiles();
+}
+
+function addCustomTool() {
+  showModal(`
+    <h2>Add a custom tool</h2>
+    <p>Add any HTML file or URL as a tile on the dashboard.</p>
+    <label>Tile name</label>
+    <input type="text" id="add-name" placeholder="e.g. Inspection Report" autofocus />
+    <label>Short description</label>
+    <input type="text" id="add-desc" placeholder="What does this tool do?" />
+    <label>Icon (1 character — emoji or symbol)</label>
+    <input type="text" id="add-icon" placeholder="•" maxlength="2" />
+    <label>File path or URL</label>
+    <input type="text" id="add-path" placeholder="/Users/chrispaton/Documents/..." />
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveCustomTool()">Add tile</button>
+    </div>
+  `);
+}
+function saveCustomTool() {
+  const name = document.getElementById('add-name').value.trim();
+  if (!name) return alert('Name is required');
+  const id = 'custom-' + Date.now();
+  tools.push({
+    id,
+    name,
+    desc: document.getElementById('add-desc').value.trim() || 'Custom tool',
+    icon: document.getElementById('add-icon').value.trim() || '•',
+    path: document.getElementById('add-path').value.trim()
+  });
+  persist();
+  closeModal();
+  renderTiles();
+}
+
+function resetAll() {
+  if (!confirm('Reset all tool paths back to defaults? Custom tools will be removed.')) return;
+  tools = DEFAULT_TOOLS.map(d => ({ ...d, path: d.defaultPath || '' }));
+  persist();
+  renderTiles();
+}
+
+function showHelp() {
+  showModal(`
+    <h2>Dashboard help</h2>
+    <p>This is a launcher for your HTML tools. Click a tile to open it. Hover a tile and click the gear icon (⚙) to set or update its file path.</p>
+    <p><strong>Set this as Chrome's startup page:</strong> Open Chrome Settings → On startup → "Open a specific page or set of pages" → Add new page → paste the file path of this dashboard. Now Chrome opens here automatically when you launch it.</p>
+    <p><strong>Bookmark for new tabs:</strong> press Cmd+D on this page and pin it to your bookmarks bar for one-click access from any tab.</p>
+    <p><strong>Add more tools:</strong> click "+ Add tool" at the bottom — works for any HTML file or web URL.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Got it</button>
+    </div>
+  `);
+}
+
+function showModal(html) {
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('show');
+}
+
+/* -------------------- Greeting + clock -------------------- */
+function updateGreeting() {
+  const h = new Date().getHours();
+  const greet = h < 5 ? 'Up early' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 22 ? 'Good evening' : 'Late one tonight';
+  document.getElementById('greeting').innerHTML = `${greet}, Chris<span class="accent">.</span>`;
+  const day = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById('subtitle').textContent = day;
+}
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock-time').textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('clock-date').textContent = 'Week ' + getISOWeek(now);
+}
+function getISOWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+/* -------------------- Helpers -------------------- */
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* -------------------- Boot -------------------- */
+loadTools();
+renderTiles();
+updateGreeting();
+updateClock();
+setInterval(updateClock, 30000);
+</script>
+</body>
+</html>

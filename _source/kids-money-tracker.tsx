@@ -1,0 +1,1254 @@
+import { useState, useEffect, useRef } from "react";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ██  CONFIGURATION  — edit these two values after Google setup  ██
+// ─────────────────────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = "140135177686-rblfhdah7giqa957nok3u3og2hd6utd9.apps.googleusercontent.com";
+const SHEET_ID         = "1i0PZjuj-KwvDekyE86cb8MKOaWx7bO9bUQ-X2lEimCA";
+
+const AUTH_KEY      = "aspire_kids_google_auth";
+const CACHE_KEY     = "aspire_kids_money_v2";
+const SCOPES        = "https://www.googleapis.com/auth/spreadsheets";
+const SHEETS_URL    = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
+const IS_CONFIGURED =
+  GOOGLE_CLIENT_ID !== "PASTE_YOUR_CLIENT_ID_HERE" &&
+  SHEET_ID         !== "PASTE_YOUR_SHEET_ID_HERE";
+
+// Lego palette
+const LEGO = {
+  yellow:      "#FFD100",
+  yellowDark:  "#CC9B00",
+  red:         "#CC0000",
+  redDark:     "#880000",
+  blue:        "#0055BF",
+  blueDark:    "#003A80",
+  green:       "#00A550",
+  greenDark:   "#006F35",
+  black:       "#1A1A1A",
+  white:       "#FFFFFF",
+  basePlate:   "#1E2D3E",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+const fmt = (n) =>
+  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n ?? 0);
+
+const todayStr = () => new Date().toISOString().split("T")[0];
+
+function calcProjections(balance, weeklyPocket, investRate, investPot) {
+  return [
+    { label: "1 month", months: 1 },
+    { label: "3 months", months: 3 },
+    { label: "6 months", months: 6 },
+    { label: "1 year", months: 12 },
+    { label: "2 years", months: 24 },
+  ].map(({ label, months }) => {
+    const weeks  = (months * 365.25) / 7 / 12;
+    const pocket = weeklyPocket * weeks;
+    const invest = investPot * (Math.pow(1 + investRate / 100 / 12, months) - 1);
+    return { label, total: balance + pocket + invest };
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-accrual — pure so it can run at load time
+// ─────────────────────────────────────────────────────────────────────────────
+function applyAccrual(state) {
+  const now = new Date();
+  let ns = { ...state };
+  let changed = false;
+
+  if (state.pocketAmount > 0) {
+    const last  = state.lastPocketDate ? new Date(state.lastPocketDate) : null;
+    const days  = last ? Math.floor((now - last) / 86400000) : 999;
+    const weeks = Math.floor(days / 7);
+    if (weeks > 0) {
+      const earned = weeks * state.pocketAmount;
+      ns.balance  = (ns.balance || 0) + earned;
+      ns.income   = [...ns.income, {
+        id: Date.now() + "p",
+        label: `Pocket money${weeks > 1 ? ` (×${weeks} wks)` : ""}`,
+        amount: earned, date: todayStr(), type: "pocket",
+      }];
+      ns.lastPocketDate = todayStr();
+      changed = true;
+    }
+  }
+
+  if (state.investPot > 0 && state.investRate > 0) {
+    const last   = state.lastInvestDate ? new Date(state.lastInvestDate) : null;
+    const months = last
+      ? (now.getFullYear() - last.getFullYear()) * 12 + (now.getMonth() - last.getMonth())
+      : 0;
+    if (months >= 1) {
+      const earned = Math.round(
+        state.investPot * (Math.pow(1 + state.investRate / 100 / 12, months) - 1) * 100
+      ) / 100;
+      if (earned > 0) {
+        ns.investPot = state.investPot * Math.pow(1 + state.investRate / 100 / 12, months);
+        ns.balance   = (ns.balance || 0) + earned;
+        ns.income    = [...ns.income, {
+          id: Date.now() + "i",
+          label: `Investment return (${state.investRate}% p.a.)`,
+          amount: earned, date: todayStr(), type: "investment_return",
+        }];
+        ns.lastInvestDate = todayStr();
+        changed = true;
+      }
+    }
+  }
+  return { state: ns, changed };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OAuth2 PKCE helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function base64urlEncode(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+async function generateCodeVerifier() {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return base64urlEncode(arr);
+}
+async function generateCodeChallenge(verifier) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return base64urlEncode(digest);
+}
+async function initiateGoogleAuth() {
+  const verifier   = await generateCodeVerifier();
+  const challenge  = await generateCodeChallenge(verifier);
+  const oauthState = Math.random().toString(36).slice(2);
+  // Use localStorage instead of sessionStorage — iOS Safari wipes sessionStorage
+  // during cross-origin redirects (Google auth page → back to app)
+  localStorage.setItem("pkce_verifier", verifier);
+  localStorage.setItem("oauth_state",   oauthState);
+  const redirectUri = window.location.href.split("?")[0].split("#")[0];
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID, redirect_uri: redirectUri,
+    response_type: "code", scope: SCOPES,
+    code_challenge: challenge, code_challenge_method: "S256",
+    state: oauthState, access_type: "offline", prompt: "consent",
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+async function exchangeCodeForTokens(code) {
+  const verifier    = localStorage.getItem("pkce_verifier");
+  const redirectUri = window.location.href.split("?")[0].split("#")[0];
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code, client_id: GOOGLE_CLIENT_ID, redirect_uri: redirectUri,
+      grant_type: "authorization_code", code_verifier: verifier,
+    }),
+  });
+  if (!res.ok) throw new Error(`Token exchange: ${res.status}`);
+  const d = await res.json();
+  return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Date.now() + d.expires_in * 1000 };
+}
+async function refreshAccessToken(refresh_token) {
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ refresh_token, client_id: GOOGLE_CLIENT_ID, grant_type: "refresh_token" }),
+  });
+  if (!res.ok) throw new Error(`Refresh: ${res.status}`);
+  const d = await res.json();
+  return { access_token: d.access_token, refresh_token: d.refresh_token ?? refresh_token, expires_at: Date.now() + d.expires_in * 1000 };
+}
+function getStoredAuth() { try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; } }
+function storeAuth(a) { localStorage.setItem(AUTH_KEY, JSON.stringify(a)); }
+function clearAuth()  { localStorage.removeItem(AUTH_KEY); }
+async function getValidToken(auth, setAuth) {
+  if (!auth) return null;
+  if (Date.now() < auth.expires_at - 60_000) return auth.access_token;
+  try { const n = await refreshAccessToken(auth.refresh_token); storeAuth(n); setAuth(n); return n.access_token; }
+  catch { return null; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Google Sheets API
+// ─────────────────────────────────────────────────────────────────────────────
+const defaults = {
+  name: "Champion", balance: 0, income: [], expenses: [],
+  investPot: 0, pocketAmount: 2, investRate: 5,
+  lastPocketDate: null, lastInvestDate: null,
+};
+function getCachedState() {
+  try { const s = localStorage.getItem(CACHE_KEY); return s ? { ...defaults, ...JSON.parse(s) } : defaults; }
+  catch { return defaults; }
+}
+async function loadFromSheets(token) {
+  const ranges = ["Settings!A:B", "Income!A:F", "Expenses!A:F"];
+  const res = await fetch(
+    `${SHEETS_URL}/values:batchGet?${ranges.map(r => `ranges=${encodeURIComponent(r)}`).join("&")}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) throw new Error(`Read ${res.status}`);
+  const data = await res.json();
+  const [sr, ir, er] = data.valueRanges;
+  const settings = {};
+  (sr.values ?? []).slice(1).forEach(([k, v]) => { if (k) settings[k] = v; });
+  const income   = (ir.values ?? []).slice(1).map(([id, label, amount, date, type]) =>
+    ({ id: parseFloat(id)||id, label: label??"", amount: parseFloat(amount)||0, date: date??"", type: type??"gift" })
+  ).filter(i => i.id && i.amount > 0);
+  const expenses = (er.values ?? []).slice(1).map(([id, label, amount, date, photo]) =>
+    ({ id: parseFloat(id)||id, label: label??"", amount: parseFloat(amount)||0, date: date??"", photo: photo||null })
+  ).filter(e => e.id && e.amount > 0);
+  return {
+    name: settings.name ?? defaults.name,
+    balance:        parseFloat(settings.balance)      || 0,
+    investPot:      parseFloat(settings.investPot)    || 0,
+    pocketAmount:   parseFloat(settings.pocketAmount) || 2,
+    investRate:     parseFloat(settings.investRate)   || 5,
+    lastPocketDate: settings.lastPocketDate || null,
+    lastInvestDate: settings.lastInvestDate || null,
+    income, expenses,
+  };
+}
+async function saveToSheets(token, appState) {
+  const H = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  await fetch(`${SHEETS_URL}/values:batchClear`, {
+    method: "POST", headers: H,
+    body: JSON.stringify({ ranges: ["Settings!A1:B20", "Income!A1:F10000", "Expenses!A1:F10000"] }),
+  });
+  await fetch(`${SHEETS_URL}/values:batchUpdate`, {
+    method: "POST", headers: H,
+    body: JSON.stringify({
+      valueInputOption: "RAW",
+      data: [
+        { range: "Settings!A1", values: [
+          ["key","value"],["name",appState.name],["balance",String(appState.balance)],
+          ["investPot",String(appState.investPot)],["pocketAmount",String(appState.pocketAmount)],
+          ["investRate",String(appState.investRate)],
+          ["lastPocketDate",appState.lastPocketDate??""],["lastInvestDate",appState.lastInvestDate??""],
+        ]},
+        { range: "Income!A1", values: [
+          ["id","label","amount","date","type"],
+          ...(appState.income??[]).map(i=>[String(i.id),i.label,String(i.amount),i.date,i.type]),
+        ]},
+        { range: "Expenses!A1", values: [
+          ["id","label","amount","date","photo"],
+          ...(appState.expenses??[]).map(e=>[String(e.id),e.label,String(e.amount),e.date,e.photo??""]),
+        ]},
+      ],
+    }),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Receipt Reader
+// ─────────────────────────────────────────────────────────────────────────────
+async function readReceiptWithAI(base64Image) {
+  const mediaType = base64Image.startsWith("data:image/png")  ? "image/png"
+    : base64Image.startsWith("data:image/gif")  ? "image/gif"
+    : base64Image.startsWith("data:image/webp") ? "image/webp" : "image/jpeg";
+  const base64Data = base64Image.split(",")[1];
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514", max_tokens: 1000,
+      messages: [{ role: "user", content: [
+        { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+        { type: "text", text: `You are reading a receipt photo for a children's money tracker app.
+Extract and respond ONLY with valid JSON:
+{"total":<number>,"store":"<name>","items":["<item>"],"date":"<YYYY-MM-DD or null>","confidence":"<high|medium|low>"}
+Currency GBP. If unreadable set total to null and confidence to "low". Return ONLY JSON.` },
+      ]}],
+    }),
+  });
+  if (!response.ok) throw new Error(`API ${response.status}`);
+  const data = await response.json();
+  const text = data.content?.find(b => b.type === "text")?.text ?? "";
+  return JSON.parse(text.replace(/```json|```/g, "").trim());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PIN Modal  — Lego control panel style
+// ─────────────────────────────────────────────────────────────────────────────
+function PinModal({ onSuccess, onClose }) {
+  const [digits, setDigits] = useState("");
+  const [shake,  setShake]  = useState(false);
+  const PIN = "1234";
+  const press = (d) => {
+    const next = digits + d;
+    if (next.length < 4) { setDigits(next); return; }
+    if (next === PIN) { onSuccess(); }
+    else { setShake(true); setTimeout(() => { setShake(false); setDigits(""); }, 600); }
+  };
+  const keys = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
+  return (
+    <div style={S.overlay}>
+      <div style={{ ...S.pinBox, animation: shake ? "shake 0.5s" : "none" }}>
+        {/* Studs on top */}
+        <div style={S.studsRow}>
+          {[1,2].map(i => <div key={i} style={{ ...S.stud, background: LEGO.yellow, boxShadow: `0 2px 0 ${LEGO.yellowDark}` }} />)}
+        </div>
+        <div style={S.pinTitle}>🔐 PARENT ZONE</div>
+        <div style={S.pinSubtitle}>Default PIN: 1234</div>
+        <div style={S.pinDots}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{
+              ...S.pinDot,
+              background:    i < digits.length ? LEGO.yellow      : "rgba(0,0,0,0.12)",
+              boxShadow:     i < digits.length ? `0 2px 0 ${LEGO.yellowDark}` : "inset 0 1px 2px rgba(0,0,0,0.15)",
+              border:        `2px solid ${i < digits.length ? LEGO.yellowDark : "rgba(0,0,0,0.2)"}`,
+            }} />
+          ))}
+        </div>
+        <div style={S.pinGrid}>
+          {keys.map((k, i) =>
+            k === "" ? <div key={i} /> :
+            <button key={i} style={S.pinKey}
+              onClick={() => k === "⌫" ? setDigits(d => d.slice(0, -1)) : press(k)}>
+              {k}
+            </button>
+          )}
+        </div>
+        <button style={S.btnGhostDark} onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Receipt Modal
+// ─────────────────────────────────────────────────────────────────────────────
+function ReceiptModal({ onConfirm, onClose }) {
+  const [photo,    setPhoto]    = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [result,   setResult]   = useState(null);
+  const [error,    setError]    = useState(null);
+  const [amount,   setAmount]   = useState("");
+  const [label,    setLabel]    = useState("");
+  const fileRef = useRef();
+
+  const handleFile = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const b64 = ev.target.result;
+      setPhoto(b64); setResult(null); setError(null); setAmount(""); setLabel("");
+      setScanning(true);
+      try {
+        const parsed = await readReceiptWithAI(b64); setResult(parsed);
+        if (parsed.total != null) setAmount(String(parsed.total));
+        if (parsed.store) setLabel(parsed.store);
+      } catch { setError("Couldn't read the receipt automatically. Enter the amount below."); }
+      finally { setScanning(false); }
+    };
+    reader.readAsDataURL(f);
+  };
+  const canConfirm = amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0;
+
+  return (
+    <div style={S.overlay}>
+      <div style={{ ...S.modal, maxHeight: "90vh", overflowY: "auto" }}>
+        {/* Studs */}
+        <div style={S.studsRow}>
+          {[1,2,3].map(i => <div key={i} style={S.stud} />)}
+        </div>
+        <div style={S.modalTitle}>🧾 ADD EXPENSE</div>
+
+        <div style={S.photoZone} onClick={() => fileRef.current.click()}>
+          {photo ? (
+            <img src={photo} alt="receipt" style={{ width: "100%", borderRadius: 8, maxHeight: 200, objectFit: "cover" }} />
+          ) : (
+            <div style={S.photoPlaceholder}>
+              <span style={{ fontSize: 36 }}>📷</span>
+              <span style={{ fontSize: 14, marginTop: 6, fontWeight: 700, color: LEGO.black }}>Tap to photograph receipt</span>
+              <span style={{ fontSize: 11, opacity: 0.5, marginTop: 2, color: LEGO.black }}>AI will read it automatically</span>
+            </div>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment"
+          style={{ display: "none" }} onChange={handleFile} />
+
+        {scanning && (
+          <div style={S.scanningBox}>
+            <div style={S.spinner} />
+            <span>Reading your receipt with AI…</span>
+          </div>
+        )}
+        {result && !scanning && (
+          <div style={S.receiptResult}>
+            <div style={S.receiptResultHeader}>
+              <span>✅ Receipt read</span>
+              <span style={{ fontSize: 11, opacity: 0.7 }}>
+                {result.confidence === "low" ? "⚠️ Low confidence — check!" : "Looks good!"}
+              </span>
+            </div>
+            {result.items?.length > 0 && (
+              <div style={S.receiptItems}>
+                {result.items.map((item, i) => <div key={i} style={S.receiptItem}>• {item}</div>)}
+              </div>
+            )}
+            {result.date && <div style={{ fontSize: 11, opacity: 0.5, marginTop: 4, color: LEGO.black }}>Date: {result.date}</div>}
+            <button style={{ ...S.btnGhostDark, marginTop: 8, fontSize: 12 }} onClick={() => fileRef.current.click()}>📷 Retake photo</button>
+          </div>
+        )}
+        {error && (
+          <div style={S.errorBox}>
+            ⚠️ {error}
+            <button style={{ ...S.btnGhostDark, marginTop: 6, fontSize: 12 }} onClick={() => fileRef.current.click()}>Try again</button>
+          </div>
+        )}
+        {photo && !scanning && (
+          <>
+            <input style={S.inputDark} placeholder="What did you buy?" value={label} onChange={e => setLabel(e.target.value)} />
+            <div style={S.amountRow}>
+              <span style={S.poundSign}>£</span>
+              <input style={{ ...S.inputDark, flex: 1, margin: 0 }} placeholder="Amount" type="number"
+                value={amount} onChange={e => setAmount(e.target.value)} />
+            </div>
+          </>
+        )}
+        <div style={S.row}>
+          <button style={S.btnSecondary} onClick={onClose}>Cancel</button>
+          <button style={{ ...S.btnPrimary, opacity: canConfirm ? 1 : 0.4 }}
+            onClick={() => {
+              if (!canConfirm) return;
+              onConfirm({ label: label || result?.store || "Purchase", amount: parseFloat(amount), photo, date: result?.date || todayStr() });
+            }}>Deduct 💸</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Invest Modal
+// ─────────────────────────────────────────────────────────────────────────────
+function InvestModal({ balance, rate, onConfirm, onClose }) {
+  const [amount, setAmount] = useState("");
+  const amt  = parseFloat(amount) || 0;
+  const projs = [1,3,6,12,24].map(m => ({
+    label: m < 12 ? `${m}m` : m === 12 ? "1 yr" : "2 yr",
+    val:   amt * Math.pow(1 + rate / 100 / 12, m),
+  }));
+
+  return (
+    <div style={S.overlay}>
+      <div style={S.modal}>
+        <div style={S.studsRow}>
+          {[1,2,3].map(i => <div key={i} style={S.stud} />)}
+        </div>
+        <div style={S.modalTitle}>📈 INVEST MONEY</div>
+        <div style={S.investRateBadge}>Interest rate: <strong>{rate}% per year</strong></div>
+        <input style={S.inputDark} placeholder={`£ to invest (max ${fmt(balance)})`}
+          type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+        {amt > 0 && (
+          <div style={S.projGridModal}>
+            {projs.map(p => (
+              <div key={p.label} style={S.projCellModal}>
+                <div style={S.projLabelModal}>{p.label}</div>
+                <div style={S.projValModal}>{fmt(p.val)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p style={{ fontSize: 12, color: "rgba(0,0,0,0.45)", margin: "0 0 16px", fontWeight: 700 }}>
+          Monthly returns added to your balance alongside pocket money.
+        </p>
+        <div style={S.row}>
+          <button style={S.btnSecondary} onClick={onClose}>Cancel</button>
+          <button style={{ ...S.btnPrimary, opacity: amt > 0 && amt <= balance ? 1 : 0.4 }}
+            onClick={() => { if (amt > 0 && amt <= balance) onConfirm(amt); }}>
+            Invest! 🚀
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Swipeable Transaction Row
+// ─────────────────────────────────────────────────────────────────────────────
+function SwipeTxRow({ t, onDelete, typeEmoji }) {
+  const [offsetX,  setOffsetX]  = useState(0);
+  const [swiping,  setSwiping]  = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const startX = useRef(null);
+  const THRESHOLD = 80;
+  const onTouchStart = (e) => { startX.current = e.touches[0].clientX; setSwiping(true); };
+  const onTouchMove  = (e) => {
+    if (startX.current === null) return;
+    const dx = e.touches[0].clientX - startX.current;
+    if (dx < 0) setOffsetX(Math.max(dx, -140));
+  };
+  const onTouchEnd = () => { setSwiping(false); setOffsetX(offsetX < -THRESHOLD ? -110 : 0); startX.current = null; };
+  const handleDelete = () => { setDeleting(true); setTimeout(() => onDelete(t), 320); };
+
+  return (
+    <div style={{ position: "relative", overflow: "hidden", borderBottom: `2px solid ${LEGO.black}22` }}>
+      <div style={{
+        position: "absolute", right: 0, top: 0, bottom: 0, width: 110,
+        background: LEGO.red, display: "flex", alignItems: "center",
+        justifyContent: "flex-end", paddingRight: 18,
+        borderLeft: `3px solid ${LEGO.redDark}`,
+      }}>
+        <button onClick={handleDelete}
+          style={{ background: "none", color: "#fff", fontSize: 22, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          🗑<span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, fontFamily: "'Bangers', cursive" }}>DELETE</span>
+        </button>
+      </div>
+      <div
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        onClick={() => { if (offsetX < -20) setOffsetX(0); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 12, padding: "13px 0",
+          background: deleting ? `${LEGO.red}22` : "transparent",
+          transform: `translateX(${offsetX}px)`,
+          transition: swiping ? "none" : "transform .25s cubic-bezier(.25,.46,.45,.94), opacity .3s",
+          opacity: deleting ? 0 : 1, willChange: "transform", userSelect: "none",
+        }}>
+        <span style={S.txIcon}>{t.kind === "out" ? "💸" : typeEmoji(t.type)}</span>
+        <div style={{ flex: 1 }}>
+          <div style={S.txLabel}>{t.label}</div>
+          <div style={S.txDate}>{t.date}</div>
+        </div>
+        <div style={{ ...S.txAmount, color: t.kind === "out" ? "#ff6b6b" : "#6bcb77" }}>
+          {t.kind === "out" ? "-" : "+"}{fmt(t.amount)}
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(0,0,0,0.2)", marginLeft: 4, transition: "opacity .2s", opacity: offsetX < -10 ? 0 : 1 }}>‹</div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading Screen
+// ─────────────────────────────────────────────────────────────────────────────
+function LoadingScreen() {
+  return (
+    <div style={{
+      fontFamily: "'Nunito', sans-serif",
+      background: "#F0F0F0",
+      backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.08) 2.5px, transparent 2.5px)",
+      backgroundSize: "18px 18px",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      gap: 20, minHeight: "100vh",
+    }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
+      <div style={{ fontSize: 72, animation: "float 3s ease-in-out infinite" }}>👷</div>
+      <div style={{ fontFamily: "'Bangers', cursive", fontSize: 28, color: LEGO.red, letterSpacing: 2 }}>
+        LOADING YOUR VAULT…
+      </div>
+      <div style={{ width: 24, height: 24, border: `3px solid rgba(0,0,0,0.15)`, borderTop: `3px solid ${LEGO.red}`, borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main App
+// ─────────────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [loading,        setLoading]        = useState(true);
+  const [loadError,      setLoadError]      = useState(null);
+  const [auth,           setAuth]           = useState(getStoredAuth);
+  const [syncStatus,     setSyncStatus]     = useState("idle");
+  const [state,          setState]          = useState(defaults);
+  const [tab,            setTab]            = useState("home");
+  const [showPin,        setShowPin]        = useState(false);
+  const [showReceipt,    setShowReceipt]    = useState(false);
+  const [showInvest,     setShowInvest]     = useState(false);
+  const [parentUnlocked, setParentUnlocked] = useState(false);
+  const [gift,           setGift]           = useState({ label: "", amount: "" });
+  const [pf,             setPf]             = useState({ name: defaults.name, pocketAmount: defaults.pocketAmount, investRate: defaults.investRate });
+  const [coinPop,        setCoinPop]        = useState(false);
+  const [saved,          setSaved]          = useState(false);
+  const saveTimerRef = useRef(null);
+  const skipSaveRef  = useRef(true);
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const params      = new URLSearchParams(window.location.search);
+    const code        = params.get("code");
+    const returnState = params.get("state");
+    const storedState = localStorage.getItem("oauth_state");
+
+    const applyState = (raw) => {
+      const { state: accrued } = applyAccrual({ ...defaults, ...raw });
+      setState(accrued);
+      setPf({ name: accrued.name, pocketAmount: accrued.pocketAmount, investRate: accrued.investRate });
+    };
+
+    if (code && returnState === storedState) {
+      localStorage.removeItem("oauth_state");
+      localStorage.removeItem("pkce_verifier");
+      window.history.replaceState({}, document.title, window.location.pathname);
+      exchangeCodeForTokens(code)
+        .then(async newAuth => {
+          storeAuth(newAuth); setAuth(newAuth);
+          const sheetsData = await loadFromSheets(newAuth.access_token);
+          // If Sheets is empty but we have local data, push local data UP to Sheets
+          const local = getCachedState();
+          const sheetsEmpty = sheetsData.balance === 0 && sheetsData.income.length === 0 && sheetsData.expenses.length === 0;
+          const haveLocal   = local.balance > 0 || local.income.length > 0 || local.expenses.length > 0;
+          if (sheetsEmpty && haveLocal) {
+            await saveToSheets(newAuth.access_token, local);
+            return local;
+          }
+          return sheetsData;
+        })
+        .then(data => { applyState(data); setLoading(false); })
+        .catch(() => { applyState(getCachedState()); setLoadError("Connected to Google but couldn't load sheet data. Using cache."); setLoading(false); });
+    } else if (auth && IS_CONFIGURED) {
+      getValidToken(auth, setAuth)
+        .then(token => { if (!token) throw new Error(); return loadFromSheets(token); })
+        .then(data => { applyState(data); setLoading(false); })
+        .catch(() => { applyState(getCachedState()); setLoadError("Couldn't reach Google Sheets — using saved data."); setLoading(false); });
+    } else {
+      applyState(getCachedState()); setLoading(false);
+    }
+  }, []); // eslint-disable-line
+
+  // ── Auto-save ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (loading) return;
+    if (skipSaveRef.current) { skipSaveRef.current = false; return; }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(state));
+    if (!auth || !IS_CONFIGURED) return;
+    setSyncStatus("saving");
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        const token = await getValidToken(auth, setAuth);
+        if (!token) throw new Error();
+        await saveToSheets(token, state);
+        setSyncStatus("saved");
+        setTimeout(() => setSyncStatus("idle"), 2500);
+      } catch { setSyncStatus("error"); }
+    }, 800);
+  }, [state]); // eslint-disable-line
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const update = (patch) => setState(s => ({ ...s, ...patch }));
+  const pop    = () => { setCoinPop(true); setTimeout(() => setCoinPop(false), 900); };
+
+  const manualExport = async () => {
+    if (!auth || !IS_CONFIGURED) return;
+    setSyncStatus("saving");
+    try {
+      const token = await getValidToken(auth, setAuth);
+      if (!token) throw new Error();
+      await saveToSheets(token, state);
+      setSyncStatus("saved");
+      setTimeout(() => setSyncStatus("idle"), 2500);
+    } catch { setSyncStatus("error"); }
+  };
+
+  const addIncome = (label, amount, type = "gift") => {
+    update({ balance: state.balance + amount, income: [...state.income, { id: Date.now(), label, amount, date: todayStr(), type }] });
+    pop();
+  };
+  const addExpense = ({ label, amount, photo, date }) => {
+    update({ balance: Math.max(0, state.balance - amount), expenses: [...state.expenses, { id: Date.now(), label, amount, date, photo }] });
+    setShowReceipt(false);
+  };
+  const deleteTransaction = (t) => {
+    if (t.kind === "out") update({ balance: state.balance + t.amount, expenses: state.expenses.filter(e => e.id !== t.id) });
+    else update({ balance: Math.max(0, state.balance - t.amount), income: state.income.filter(i => i.id !== t.id) });
+  };
+  const doInvest = (amount) => { update({ balance: state.balance - amount, investPot: state.investPot + amount, lastInvestDate: todayStr() }); setShowInvest(false); pop(); };
+  const saveParent = () => { update({ name: pf.name, pocketAmount: parseFloat(pf.pocketAmount)||0, investRate: parseFloat(pf.investRate)||5 }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
+  const disconnectGoogle = () => { clearAuth(); setAuth(null); setSyncStatus("idle"); };
+
+  const projs           = calcProjections(state.balance, state.pocketAmount, state.investRate, state.investPot);
+  const allTransactions = [
+    ...state.income.map(i  => ({ ...i, kind: "in" })),
+    ...state.expenses.map(e => ({ ...e, kind: "out" })),
+  ].sort((a, b) => b.id - a.id);
+  const typeEmoji = (t) => t === "pocket" ? "💰" : t === "investment_return" ? "📈" : "🎁";
+
+  const syncBadge = syncStatus === "saving" ? { icon: "⏳", text: "Saving…",    color: LEGO.yellow }
+    : syncStatus === "saved"  ? { icon: "✅", text: "Synced",     color: LEGO.green  }
+    : syncStatus === "error"  ? { icon: "⚠️", text: "Sync error", color: LEGO.red    }
+    : null;
+
+  if (loading) return <LoadingScreen />;
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div style={S.app}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap');
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        @keyframes coinPop{0%{opacity:1;transform:translate(-50%,-50%) scale(.6)}60%{opacity:1;transform:translate(-50%,-160%) scale(1.5)}100%{opacity:0;transform:translate(-50%,-220%) scale(1)}}
+        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        button{cursor:pointer;border:none;font-family:inherit}
+        button:active{transform:translateY(3px)!important;box-shadow:none!important}
+        input{font-family:inherit}
+        input:focus{outline:none;border-color:${LEGO.yellow}!important}
+        input::placeholder{color:rgba(0,0,0,0.35);font-weight:600}
+        ::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar-thumb{background:${LEGO.yellow}66;border-radius:4px}
+      `}</style>
+
+      {/* Coin pop */}
+      {coinPop && <div style={S.coinPop}>🪙</div>}
+
+      {/* Sync badge */}
+      {syncBadge && (
+        <div style={{
+          position: "fixed", top: 12, right: 12, zIndex: 200,
+          background: LEGO.black, border: `2px solid ${syncBadge.color}`,
+          borderRadius: 6, padding: "5px 12px",
+          fontSize: 12, color: syncBadge.color, fontWeight: 800,
+          display: "flex", alignItems: "center", gap: 5,
+          fontFamily: "'Bangers', cursive", letterSpacing: 1,
+          animation: "fadeIn .2s ease",
+        }}>
+          {syncBadge.icon} {syncBadge.text}
+        </div>
+      )}
+
+      {/* Error banner */}
+      {loadError && (
+        <div style={{
+          background: LEGO.red, borderBottom: `3px solid ${LEGO.redDark}`,
+          padding: "8px 16px", fontSize: 12, color: "#fff", fontWeight: 800,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          ⚠️ {loadError}
+          <button style={{ background: "none", color: "#fff", fontSize: 11, textDecoration: "underline" }}
+            onClick={() => setLoadError(null)}>dismiss</button>
+        </div>
+      )}
+
+      {/* Modals */}
+      {showPin && (
+        <PinModal
+          onSuccess={() => { setParentUnlocked(true); setShowPin(false); setTab("parent"); }}
+          onClose={() => setShowPin(false)} />
+      )}
+      {showReceipt && <ReceiptModal onConfirm={addExpense} onClose={() => setShowReceipt(false)} />}
+      {showInvest  && <InvestModal balance={state.balance} rate={state.investRate} onConfirm={doInvest} onClose={() => setShowInvest(false)} />}
+
+      {/* ── HOME TAB ──────────────────────────────────────────────────────── */}
+      {tab === "home" && (
+        <div style={S.page}>
+          {/* Header */}
+          <div style={S.header}>
+            <div style={S.headerTop}>
+              <div>
+                <div style={S.greeting}>Hi {state.name}! 👋</div>
+                <div style={S.subGreeting}>YOUR LEGO SAVINGS VAULT</div>
+              </div>
+              <div style={S.piggyIcon}>👷</div>
+            </div>
+
+            {/* Balance card — yellow Lego brick with studs */}
+            <div style={S.balanceCard}>
+              <div style={S.studsRow}>
+                {[1,2,3,4].map(i => <div key={i} style={S.stud} />)}
+              </div>
+              <div style={S.balanceLabel}>TOTAL SAVINGS</div>
+              <div style={S.balanceAmount}>{fmt(state.balance)}</div>
+              {state.investPot > 0 && (
+                <div style={S.investBadge}>📈 {fmt(state.investPot)} INVESTED</div>
+              )}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={S.actionGrid}>
+            <button
+              style={{ ...S.actionBtn, background: LEGO.red, boxShadow: `0 7px 0 ${LEGO.redDark}, 0 8px 3px rgba(0,0,0,0.3)` }}
+              onClick={() => setShowReceipt(true)}>
+              <span style={S.actionIcon}>🧾</span>
+              <span style={S.actionLabel}>SPEND</span>
+            </button>
+            <button
+              style={{ ...S.actionBtn, background: LEGO.blue, boxShadow: `0 7px 0 ${LEGO.blueDark}, 0 8px 3px rgba(0,0,0,0.3)` }}
+              onClick={() => setShowInvest(true)}>
+              <span style={S.actionIcon}>📈</span>
+              <span style={S.actionLabel}>INVEST</span>
+            </button>
+          </div>
+
+          {/* Projections */}
+          <div style={S.section}>
+            <div style={S.sectionTitle}>🔮 BUILD YOUR SAVINGS…</div>
+            <div style={S.projRow}>
+              {projs.map((p, idx) => {
+                const colors = [
+                  { bg: LEGO.yellow, shadow: LEGO.yellowDark, text: "#1a1200" },
+                  { bg: LEGO.red,    shadow: LEGO.redDark,    text: "#fff"    },
+                  { bg: LEGO.blue,   shadow: LEGO.blueDark,   text: "#fff"    },
+                  { bg: LEGO.green,  shadow: LEGO.greenDark,  text: "#fff"    },
+                  { bg: "#F47B20",   shadow: "#B85A00",        text: "#fff"    },
+                ][idx % 5];
+                return (
+                  <div key={p.label} style={{ ...S.projCard, background: colors.bg, boxShadow: `0 5px 0 ${colors.shadow}`, border: "2px solid rgba(0,0,0,0.18)" }}>
+                    <div style={{ ...S.projCardLabel, color: colors.bg === LEGO.yellow ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.8)" }}>{p.label}</div>
+                    <div style={{ ...S.projCardVal, color: colors.text }}>{fmt(p.total)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Recent */}
+          <div style={S.section}>
+            <div style={S.sectionTitle}>⏱ RECENT BRICKS</div>
+            <div style={{ fontSize: 11, color: "rgba(0,0,0,0.35)", marginTop: -8, marginBottom: 10, fontWeight: 700 }}>← swipe to delete</div>
+            {allTransactions.slice(0, 5).map(t => (
+              <SwipeTxRow key={t.id} t={t} typeEmoji={typeEmoji} onDelete={deleteTransaction} />
+            ))}
+            {allTransactions.length === 0 && <div style={S.empty}>No bricks placed yet! Start building! 🧱</div>}
+            {allTransactions.length > 5 && (
+              <button style={S.seeAll} onClick={() => setTab("history")}>See all →</button>
+            )}
+          </div>
+          <div style={{ height: 90 }} />
+        </div>
+      )}
+
+      {/* ── HISTORY TAB ───────────────────────────────────────────────────── */}
+      {tab === "history" && (
+        <div style={S.page}>
+          <div style={S.pageTitle}>📜 ALL BRICKS</div>
+          <div style={{ fontSize: 11, color: "rgba(0,0,0,0.35)", marginTop: -10, marginBottom: 14, fontWeight: 700 }}>← swipe left to delete</div>
+          {allTransactions.map(t => (
+            <SwipeTxRow key={t.id} t={t} typeEmoji={typeEmoji} onDelete={deleteTransaction} />
+          ))}
+          {allTransactions.length === 0 && <div style={S.empty}>No bricks placed yet! 🧱</div>}
+          <div style={{ height: 90 }} />
+        </div>
+      )}
+
+      {/* ── PARENT LOCK SCREEN ────────────────────────────────────────────── */}
+      {tab === "parent" && !parentUnlocked && (
+        <div style={{ ...S.page, alignItems: "center", justifyContent: "center", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ fontSize: 64, animation: "float 3s ease-in-out infinite" }}>🔐</div>
+          <div style={{ fontFamily: "'Bangers', cursive", fontSize: 28, color: LEGO.red, letterSpacing: 2 }}>PARENT ZONE</div>
+          <div style={{ color: "rgba(0,0,0,0.5)", fontSize: 14, textAlign: "center", fontWeight: 700 }}>
+            Tap to unlock parent settings
+          </div>
+          <button style={{ ...S.btnPrimary, flex: "unset", padding: "14px 32px" }} onClick={() => setShowPin(true)}>UNLOCK</button>
+        </div>
+      )}
+
+      {/* ── PARENT SETTINGS ───────────────────────────────────────────────── */}
+      {tab === "parent" && parentUnlocked && (
+        <div style={S.page}>
+          <div style={S.pageTitle}>⚙️ PARENT SETTINGS</div>
+
+          {/* Cloud Sync — blue brick */}
+          <div style={{ ...S.card, boxShadow: `0 7px 0 ${LEGO.blueDark}` }}>
+            <div style={S.studsRow}>
+              {[1,2].map(i => <div key={i} style={{ ...S.stud, background: LEGO.blue, boxShadow: `0 2px 0 ${LEGO.blueDark}` }} />)}
+            </div>
+            <div style={S.cardTitle}>☁️ CLOUD SYNC</div>
+
+            {!IS_CONFIGURED ? (
+              <div style={{ fontSize: 13, color: "rgba(0,0,0,0.55)", lineHeight: 1.7, fontWeight: 700 }}>
+                Add your <strong style={{ color: LEGO.blue }}>GOOGLE_CLIENT_ID</strong> and <strong style={{ color: LEGO.blue }}>SHEET_ID</strong> at the top of the source file to enable sync.
+              </div>
+            ) : auth ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                  <span style={{ fontSize: 20 }}>
+                    {syncStatus === "saving" ? "⏳" : syncStatus === "error" ? "⚠️" : "✅"}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: 13, color: syncStatus === "error" ? LEGO.red : LEGO.green, fontWeight: 800 }}>
+                      {syncStatus === "saving" ? "Saving to Sheets…" : syncStatus === "error" ? "Sync error — tap Export" : "Connected to Google Sheets"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(0,0,0,0.4)", marginTop: 2, fontWeight: 700 }}>
+                      {syncStatus === "saved" ? "✅ Just synced" : "Auto-saves on every change"}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button style={{ ...S.btnPrimary, fontSize: 14, flex: 1 }} onClick={manualExport}>📤 EXPORT TO SHEETS</button>
+                  <button style={{ ...S.btnSecondary, fontSize: 14, flex: 1 }} onClick={disconnectGoogle}>Disconnect</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: "rgba(0,0,0,0.55)", lineHeight: 1.7, marginBottom: 14, fontWeight: 700 }}>
+                  Connect Google Sheets to save data across devices and browser clears.
+                </div>
+                <button style={S.btnPrimary} onClick={initiateGoogleAuth}>🔗 CONNECT GOOGLE SHEETS</button>
+              </>
+            )}
+          </div>
+
+          {/* Add gift — green brick */}
+          <div style={{ ...S.card, boxShadow: `0 7px 0 ${LEGO.greenDark}` }}>
+            <div style={S.studsRow}>
+              {[1,2].map(i => <div key={i} style={{ ...S.stud, background: LEGO.green, boxShadow: `0 2px 0 ${LEGO.greenDark}` }} />)}
+            </div>
+            <div style={S.cardTitle}>🎁 ADD GIFT MONEY</div>
+            <input style={S.inputDark} placeholder="What's it for? (e.g. Birthday)"
+              value={gift.label} onChange={e => setGift(g => ({ ...g, label: e.target.value }))} />
+            <div style={S.amountRow}>
+              <span style={S.poundSign}>£</span>
+              <input style={{ ...S.inputDark, flex: 1, margin: 0 }} placeholder="Amount" type="number"
+                value={gift.amount} onChange={e => setGift(g => ({ ...g, amount: e.target.value }))} />
+            </div>
+            <button style={S.btnPrimary} onClick={() => {
+              const amt = parseFloat(gift.amount);
+              if (!gift.label || isNaN(amt) || amt <= 0) return;
+              addIncome(gift.label, amt, "gift");
+              setGift({ label: "", amount: "" });
+            }}>ADD TO BALANCE 🎉</button>
+          </div>
+
+          {/* Pocket money — yellow brick */}
+          <div style={{ ...S.card, boxShadow: `0 7px 0 ${LEGO.yellowDark}` }}>
+            <div style={S.studsRow}>
+              {[1,2].map(i => <div key={i} style={S.stud} />)}
+            </div>
+            <div style={S.cardTitle}>💰 POCKET MONEY</div>
+            <label style={S.formLabel}>Child's name</label>
+            <input style={S.inputDark} value={pf.name} onChange={e => setPf(p => ({ ...p, name: e.target.value }))} />
+            <label style={S.formLabel}>Weekly pocket money (£)</label>
+            <div style={S.amountRow}>
+              <span style={S.poundSign}>£</span>
+              <input style={{ ...S.inputDark, flex: 1, margin: 0 }} type="number"
+                value={pf.pocketAmount} onChange={e => setPf(p => ({ ...p, pocketAmount: e.target.value }))} />
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(0,0,0,0.4)", marginBottom: 8, fontWeight: 700 }}>
+              Auto-added each week on app open
+            </div>
+          </div>
+
+          {/* Investment rate — red brick */}
+          <div style={{ ...S.card, boxShadow: `0 7px 0 ${LEGO.redDark}` }}>
+            <div style={S.studsRow}>
+              {[1,2].map(i => <div key={i} style={{ ...S.stud, background: LEGO.red, boxShadow: `0 2px 0 ${LEGO.redDark}` }} />)}
+            </div>
+            <div style={S.cardTitle}>📈 INVESTMENT RATE</div>
+            <label style={S.formLabel}>Annual interest rate (%)</label>
+            <div style={S.amountRow}>
+              <span style={S.poundSign}>%</span>
+              <input style={{ ...S.inputDark, flex: 1, margin: 0 }} type="number"
+                value={pf.investRate} onChange={e => setPf(p => ({ ...p, investRate: e.target.value }))} />
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(0,0,0,0.4)", marginBottom: 8, fontWeight: 700 }}>
+              Applied monthly to invested amount
+            </div>
+          </div>
+
+          <button style={{ ...S.btnPrimary, width: "100%", flex: "unset" }} onClick={saveParent}>
+            {saved ? "✅ SAVED!" : "SAVE SETTINGS"}
+          </button>
+
+          <div style={{ height: 90 }} />
+        </div>
+      )}
+
+      {/* ── NAV BAR ───────────────────────────────────────────────────────── */}
+      <div style={S.nav}>
+        {[
+          { id: "home",    icon: "🏠", label: "HOME"    },
+          { id: "history", icon: "📜", label: "HISTORY" },
+          { id: "parent",  icon: "⚙️", label: "PARENT"  },
+        ].map(n => (
+          <button key={n.id} style={{ ...S.navBtn, ...(tab === n.id ? S.navBtnActive : {}) }}
+            onClick={() => {
+              if (n.id === "parent" && !parentUnlocked) { setShowPin(true); return; }
+              setTab(n.id);
+            }}>
+            <span style={{ fontSize: 22 }}>{n.icon}</span>
+            <span style={S.navLabel}>{n.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Styles — Lego theme
+// ─────────────────────────────────────────────────────────────────────────────
+const S = {
+  // App container — light baseplate with stud dot pattern
+  app: {
+    fontFamily: "'Nunito', sans-serif",
+    background: "#F0F0F0",
+    backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.08) 2.5px, transparent 2.5px)",
+    backgroundSize: "18px 18px",
+    minHeight: "100vh",
+    maxWidth: 430,
+    margin: "0 auto",
+    position: "relative",
+    overflow: "hidden",
+  },
+  page: { padding: "24px 20px 0", animation: "slideUp .3s ease", overflowY: "auto", height: "100vh" },
+  header: { marginBottom: 20 },
+  headerTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
+
+  // Greeting
+  greeting: {
+    fontFamily: "'Bangers', cursive",
+    fontSize: 34, color: LEGO.blue, lineHeight: 1.1, letterSpacing: 1.5,
+  },
+  subGreeting: {
+    fontSize: 11, color: "rgba(0,0,0,0.45)", marginTop: 3,
+    fontWeight: 900, letterSpacing: 2, textTransform: "uppercase",
+  },
+  piggyIcon: { fontSize: 48, animation: "float 3s ease-in-out infinite" },
+
+  // Balance card — yellow Lego brick
+  balanceCard: {
+    background: LEGO.yellow,
+    borderRadius: 10,
+    padding: "16px 24px 22px",
+    textAlign: "center",
+    border: "3px solid rgba(0,0,0,0.2)",
+    boxShadow: `0 9px 0 ${LEGO.yellowDark}, 0 11px 5px rgba(0,0,0,0.3)`,
+  },
+  balanceLabel: {
+    fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 900,
+    letterSpacing: 3, textTransform: "uppercase", marginBottom: 4,
+  },
+  balanceAmount: {
+    fontFamily: "'Bangers', cursive", fontSize: 58,
+    color: LEGO.black, lineHeight: 1.05, letterSpacing: 2,
+  },
+  investBadge: {
+    marginTop: 8, display: "inline-block",
+    background: "rgba(0,0,0,0.12)", color: LEGO.black,
+    borderRadius: 4, padding: "4px 12px",
+    fontSize: 11, fontWeight: 900, letterSpacing: 1,
+  },
+
+  // Studs (Lego bump decorations)
+  studsRow: { display: "flex", gap: 10, justifyContent: "center", marginBottom: 14 },
+  stud: {
+    width: 18, height: 18, borderRadius: "50%",
+    background: "rgba(0,0,0,0.12)",
+    border: "2px solid rgba(0,0,0,0.12)",
+    boxShadow: "0 2px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)",
+  },
+
+  // Action buttons
+  actionGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 26 },
+  actionBtn: {
+    borderRadius: 8, padding: "18px 12px",
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+    border: "2px solid rgba(0,0,0,0.25)",
+    transition: "transform .1s",
+  },
+  actionIcon:  { fontSize: 32 },
+  actionLabel: { fontFamily: "'Bangers', cursive", fontSize: 20, color: "#fff", letterSpacing: 1.5 },
+
+  // Sections
+  section:      { marginBottom: 26 },
+  sectionTitle: { fontFamily: "'Bangers', cursive", fontSize: 22, color: LEGO.red, marginBottom: 12, letterSpacing: 1.5 },
+
+  // Projection cards
+  projRow:      { display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10 },
+  projCard:     { borderRadius: 7, padding: "12px 14px", minWidth: 90, textAlign: "center", flexShrink: 0 },
+  projCardLabel:{ fontSize: 10, marginBottom: 4, fontWeight: 900, letterSpacing: 0.5 },
+  projCardVal:  { fontFamily: "'Bangers', cursive", fontSize: 17, letterSpacing: 1 },
+
+  // Transaction rows
+  txIcon:   { fontSize: 24, width: 36, textAlign: "center" },
+  txLabel:  { fontSize: 14, color: LEGO.black, fontWeight: 700 },
+  txDate:   { fontSize: 11, color: "rgba(0,0,0,0.45)", marginTop: 2 },
+  txAmount: { fontFamily: "'Bangers', cursive", fontSize: 18, flexShrink: 0, letterSpacing: 1 },
+  empty:    { color: "rgba(0,0,0,0.35)", textAlign: "center", padding: "28px 0", fontSize: 16, fontFamily: "'Bangers', cursive", letterSpacing: 1.5 },
+  seeAll:   { background: "none", color: LEGO.blue, fontSize: 14, fontWeight: 900, padding: "8px 0", width: "100%", textAlign: "center", letterSpacing: 1, fontFamily: "'Bangers', cursive" },
+
+  // History / parent page titles
+  pageTitle: { fontFamily: "'Bangers', cursive", fontSize: 30, color: LEGO.red, marginBottom: 20, letterSpacing: 2 },
+
+  // Cards — white Lego bricks (default shadow; overridden inline per section)
+  card: {
+    background: LEGO.white,
+    border: "2px solid rgba(0,0,0,0.15)",
+    borderRadius: 8,
+    padding: "16px 20px 20px",
+    marginBottom: 20,
+    boxShadow: `0 7px 0 rgba(0,0,0,0.2)`,
+  },
+  cardTitle: {
+    fontFamily: "'Bangers', cursive", fontSize: 20,
+    color: LEGO.black, marginBottom: 14, letterSpacing: 1.5,
+  },
+  formLabel: {
+    display: "block", fontSize: 10, color: "rgba(0,0,0,0.45)",
+    marginBottom: 6, fontWeight: 900, letterSpacing: 1.5, textTransform: "uppercase",
+  },
+
+  // Inputs — dark text for white card/modal backgrounds
+  inputDark: {
+    width: "100%",
+    background: "rgba(0,0,0,0.06)",
+    border: "2px solid rgba(0,0,0,0.18)",
+    borderRadius: 6,
+    padding: "12px 14px",
+    color: LEGO.black,
+    fontSize: 15,
+    marginBottom: 10,
+    fontWeight: 700,
+  },
+
+  amountRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
+  poundSign: { fontFamily: "'Bangers', cursive", fontSize: 22, color: LEGO.red, width: 22, textAlign: "center" },
+  row:       { display: "flex", gap: 10, marginTop: 8 },
+
+  // Buttons
+  btnPrimary: {
+    background: LEGO.yellow,
+    color: LEGO.black,
+    fontFamily: "'Bangers', cursive",
+    fontSize: 18, letterSpacing: 1.5,
+    padding: "13px 20px",
+    borderRadius: 6, flex: 1,
+    border: "2px solid rgba(0,0,0,0.2)",
+    boxShadow: `0 5px 0 ${LEGO.yellowDark}`,
+    transition: "transform .1s",
+  },
+  btnSecondary: {
+    background: LEGO.white,
+    color: LEGO.black,
+    fontFamily: "'Bangers', cursive",
+    fontSize: 18, letterSpacing: 1.5,
+    padding: "13px 20px",
+    borderRadius: 6, flex: 1,
+    border: "2px solid rgba(0,0,0,0.2)",
+    boxShadow: "0 5px 0 rgba(0,0,0,0.15)",
+  },
+  btnGhostDark: {
+    background: "transparent",
+    color: "rgba(0,0,0,0.4)",
+    fontSize: 13, fontWeight: 800,
+    padding: "6px 0",
+    display: "block", width: "100%", textAlign: "center",
+  },
+
+  // Nav
+  nav: {
+    position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+    width: "100%", maxWidth: 430,
+    background: "#111C2A",
+    borderTop: `4px solid ${LEGO.yellow}`,
+    display: "flex", padding: "8px 0 20px",
+  },
+  navBtn: {
+    flex: 1, display: "flex", flexDirection: "column",
+    alignItems: "center", gap: 3, padding: "6px 0",
+    background: "none", color: "rgba(255,255,255,.3)",
+  },
+  navBtnActive: { color: LEGO.yellow },
+  navLabel: { fontFamily: "'Bangers', cursive", fontSize: 13, letterSpacing: 1 },
+
+  // Overlay + Modals — white Lego bricks
+  overlay: {
+    position: "fixed", inset: 0,
+    background: "rgba(0,0,0,.82)", backdropFilter: "blur(4px)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    zIndex: 100, padding: 20, animation: "fadeIn .2s ease",
+  },
+  modal: {
+    background: LEGO.white,
+    border: `3px solid ${LEGO.black}`,
+    borderRadius: 12, padding: "16px 24px 24px",
+    width: "100%", maxWidth: 380,
+    animation: "slideUp .25s ease",
+    boxShadow: `0 8px 0 ${LEGO.black}`,
+    color: LEGO.black,
+  },
+  modalTitle: {
+    fontFamily: "'Bangers', cursive", fontSize: 26,
+    color: LEGO.black, marginBottom: 16, letterSpacing: 1.5,
+  },
+
+  // Photo zone (receipt)
+  photoZone: {
+    background: "rgba(0,0,0,0.05)",
+    border: `3px dashed ${LEGO.yellow}`,
+    borderRadius: 10, minHeight: 120,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer", marginBottom: 14, overflow: "hidden",
+  },
+  photoPlaceholder: { display: "flex", flexDirection: "column", alignItems: "center", color: "rgba(0,0,0,0.4)", gap: 4 },
+
+  // Scanning / results
+  scanningBox: {
+    display: "flex", alignItems: "center", gap: 10,
+    background: `${LEGO.yellow}22`,
+    border: `2px solid ${LEGO.yellow}`,
+    borderRadius: 8, padding: "10px 14px", marginBottom: 12,
+    fontSize: 13, color: "#664400", fontWeight: 800,
+  },
+  spinner: {
+    width: 18, height: 18,
+    border: "3px solid rgba(0,0,0,0.12)",
+    borderTop: `3px solid ${LEGO.yellow}`,
+    borderRadius: "50%", animation: "spin .8s linear infinite", flexShrink: 0,
+  },
+  receiptResult: {
+    background: `${LEGO.green}18`,
+    border: `2px solid ${LEGO.green}`,
+    borderRadius: 8, padding: 14, marginBottom: 12,
+  },
+  receiptResultHeader: {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    fontSize: 13, color: LEGO.greenDark, fontWeight: 800, marginBottom: 6,
+  },
+  receiptItems: { fontSize: 12, color: "rgba(0,0,0,0.6)" },
+  receiptItem:  { paddingTop: 2 },
+  errorBox: {
+    background: `${LEGO.red}14`,
+    border: `2px solid ${LEGO.red}`,
+    borderRadius: 8, padding: 14, marginBottom: 12,
+    fontSize: 13, color: LEGO.redDark, fontWeight: 800,
+  },
+
+  // PIN modal
+  pinBox: {
+    background: LEGO.white,
+    border: `3px solid ${LEGO.black}`,
+    borderRadius: 12, padding: "16px 28px 28px",
+    width: "100%", maxWidth: 320, textAlign: "center",
+    boxShadow: `0 8px 0 ${LEGO.black}`,
+    color: LEGO.black,
+  },
+  pinTitle: { fontFamily: "'Bangers', cursive", fontSize: 26, color: LEGO.black, marginBottom: 4, letterSpacing: 2 },
+  pinSubtitle: { fontSize: 12, color: "rgba(0,0,0,0.4)", marginBottom: 20, fontWeight: 800 },
+  pinDots: { display: "flex", justifyContent: "center", gap: 14, marginBottom: 22 },
+  pinDot:  { width: 18, height: 18, borderRadius: "50%", transition: "background .15s, box-shadow .15s" },
+  pinGrid: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 16 },
+  pinKey: {
+    background: LEGO.blue, border: `2px solid ${LEGO.blueDark}`,
+    borderRadius: 8, padding: "16px 0",
+    fontFamily: "'Bangers', cursive", fontSize: 24, color: "#fff",
+    cursor: "pointer", boxShadow: `0 5px 0 ${LEGO.blueDark}`, letterSpacing: 1,
+  },
+
+  // Invest modal projection grid
+  projGridModal: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 },
+  projCellModal: {
+    background: LEGO.yellow,
+    borderRadius: 6, padding: "10px 6px", textAlign: "center",
+    border: "2px solid rgba(0,0,0,0.18)",
+    boxShadow: `0 4px 0 ${LEGO.yellowDark}`,
+  },
+  projLabelModal: { fontSize: 10, color: "rgba(0,0,0,0.5)", marginBottom: 3, fontWeight: 900, letterSpacing: 0.5 },
+  projValModal:   { fontFamily: "'Bangers', cursive", fontSize: 15, color: LEGO.black, letterSpacing: 0.5 },
+  investRateBadge: {
+    background: `${LEGO.blue}18`, border: `2px solid ${LEGO.blue}`,
+    borderRadius: 8, padding: "8px 12px", fontSize: 13,
+    color: LEGO.blueDark, marginBottom: 12, fontWeight: 800,
+  },
+
+  // Coin pop
+  coinPop: { position: "fixed", top: "40%", left: "50%", fontSize: 44, zIndex: 999, pointerEvents: "none", animation: "coinPop .9s ease forwards" },
+};

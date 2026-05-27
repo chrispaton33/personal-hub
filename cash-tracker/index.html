@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aspire — Weekly Cash Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    /* Light palette — matches the launcher dashboard for visual coherence. */
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --panel-2: #f1f3f7;
+    --border: #dde1e8;
+    --text: #0f172a;
+    --muted: #5a6478;
+    --accent: #c9a227;
+    --accent-soft: #fef9e7;
+    --green: #16a34a;
+    --red: #dc2626;
+    --blue: #2563eb;
+    --purple: #7c3aed;
+    --orange: #ea580c;
+    --teal: #0d9488;
+    --pink: #db2777;
+    --yellow: #ca8a04;
+    --gray: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header h1 span.accent { color: var(--accent); }
+  header .subtitle { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .tab {
+    padding: 14px 20px;
+    cursor: pointer;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  main { padding: 24px 32px 64px; max-width: 1400px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card h2 .meta { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .group {
+    margin-bottom: 20px;
+  }
+  .group-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .account-input {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .account-input label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-wrap .prefix {
+    position: absolute;
+    left: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    pointer-events: none;
+  }
+  input[type="number"], input[type="text"], input[type="date"] {
+    width: 100%;
+    padding: 9px 10px 9px 22px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  input[type="date"] { padding-left: 10px; }
+  input[type="text"]:not(.with-prefix) { padding-left: 10px; }
+  input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .btn {
+    padding: 10px 18px;
+    background: var(--accent);
+    color: #1a1500;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn:hover { background: #d4ae30; }
+  .btn.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn.secondary:hover { background: var(--panel-2); border-color: var(--accent); }
+  .btn.danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .btn.danger:hover { background: rgba(248,113,113,0.08); border-color: var(--red); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .expected-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .expected-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.2fr 40px;
+    gap: 8px;
+    align-items: center;
+  }
+  .expected-row .remove-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .expected-row .remove-btn:hover { color: var(--red); border-color: var(--red); }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .stat .value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .stat .delta {
+    font-size: 12px;
+    margin-top: 4px;
+    color: var(--muted);
+  }
+  .stat .delta.up { color: var(--green); }
+  .stat .delta.down { color: var(--red); }
+  .stat.highlight { border-color: var(--accent); background: linear-gradient(135deg, var(--panel) 0%, var(--accent-soft) 100%); }
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 1100px) {
+    .chart-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .chart-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 360px;
+  }
+  .chart-box h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .chart-container {
+    position: relative;
+    height: 320px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
+  tr:hover td { background: var(--panel-2); }
+  .history-wrap {
+    overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  .total-row { font-weight: 700; color: var(--accent); }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-state h3 { color: var(--text); margin-bottom: 8px; }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border: 1px solid var(--green);
+    color: var(--green);
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.25s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .chip {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-weight: 500;
+    margin-left: 6px;
+  }
+  .chip.green { background: rgba(74,222,128,0.12); color: var(--green); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Aspire <span class="accent">·</span> Weekly Cash Tracker</h1>
+    <div class="subtitle" id="subtitle">Loading…</div>
+  </div>
+  <div class="actions" style="margin:0;">
+    <button class="btn" id="connect-btn" onclick="onConnectClick()">Connect data file</button>
+    <button class="btn secondary" onclick="exportData()">Export JSON</button>
+    <button class="btn secondary" onclick="document.getElementById('importFile').click()">Import JSON</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)" />
+  </div>
+</header>
+<div id="storage-banner" style="display:none;padding:10px 32px;border-bottom:1px solid var(--border);background:rgba(201,162,39,0.08);color:var(--accent);font-size:13px;"></div>
+
+<div class="tabs">
+  <div class="tab active" data-view="entry">Weekly Entry</div>
+  <div class="tab" data-view="dashboard">Dashboard</div>
+  <div class="tab" data-view="history">History</div>
+</div>
+
+<main>
+
+  <!-- ENTRY VIEW -->
+  <section class="view active" id="view-entry">
+    <div class="card">
+      <h2>Week Ending <span class="meta" id="entry-status"></span></h2>
+      <div class="row">
+        <div class="account-input">
+          <label>Week ending date</label>
+          <input type="date" id="entry-date" />
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="group-label">M&amp;C Residential (MCR)</span>
+        <div class="accounts-grid">
+          <div class="account-input">
+            <label>MCR HSBC Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="mcr_hsbc" /></div>
+          </div>
+          <div class="account-input">
+            <label>MCR Allica Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="mcr_allica" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Aspire North East (ANE)</span>
+        <div class="accounts-grid">
+          <div class="account-input">
+            <label>ANE HSBC Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="ane_hsbc" /></div>
+          </div>
+          <div class="account-input">
+            <label>ANE Allica Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="ane_allica" /></div>
+          </div>
+          <div class="account-input">
+            <label>ANE IBKR Trading Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="ane_ibkr" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="group-label">M&amp;C Developments (MCD)</span>
+        <div class="accounts-grid">
+          <div class="account-input">
+            <label>MCD HSBC Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="mcd_hsbc" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Aspire Living Management (ALM)</span>
+        <div class="accounts-grid">
+          <div class="account-input">
+            <label>ALM HSBC Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="alm_hsbc" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Personal</span>
+        <div class="accounts-grid">
+          <div class="account-input">
+            <label>Personal Tide Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="personal_tide" /></div>
+          </div>
+          <div class="account-input">
+            <label>Personal Bank Account</label>
+            <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" data-account="personal_bank" /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cash Expected <span class="meta">Upcoming inflows into any account</span></h2>
+      <div class="expected-list" id="expected-list"></div>
+      <button class="btn secondary" onclick="addExpectedRow()">+ Add expected inflow</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="saveEntry()">Save week</button>
+      <button class="btn secondary" onclick="loadLastWeek()">Pre-fill from last week</button>
+      <button class="btn secondary" onclick="clearForm()">Clear form</button>
+    </div>
+  </section>
+
+  <!-- DASHBOARD VIEW -->
+  <section class="view" id="view-dashboard">
+    <div class="summary-grid" id="summary-stats"></div>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>Balances over time <span class="chip">per account</span></h3>
+        <div class="chart-container"><canvas id="lineChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Total funds by week <span class="chip">stacked</span></h3>
+        <div class="chart-container"><canvas id="barChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h2>Latest snapshot <span class="meta" id="latest-week"></span></h2>
+      <div id="latest-breakdown"></div>
+    </div>
+    <div class="card">
+      <h2>Expected inflows <span class="meta">from latest entry</span></h2>
+      <div id="expected-breakdown"></div>
+    </div>
+  </section>
+
+  <!-- HISTORY VIEW -->
+  <section class="view" id="view-history">
+    <div class="chart-box" style="margin-bottom:16px;">
+      <h3>Total cash &amp; expected inflows <span class="chip">week on week</span></h3>
+      <div class="chart-container"><canvas id="historyChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>All weekly entries <span class="meta" id="history-count"></span></h2>
+      <div class="history-wrap">
+        <table id="history-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* -------------------- Config -------------------- */
+const ACCOUNTS = [
+  { key: 'mcr_hsbc',      name: 'MCR HSBC',         group: 'MCR',      color: '#60a5fa' },
+  { key: 'mcr_allica',    name: 'MCR Allica',       group: 'MCR',      color: '#3b82f6' },
+  { key: 'ane_hsbc',      name: 'ANE HSBC',         group: 'ANE',      color: '#c9a227' },
+  { key: 'ane_allica',    name: 'ANE Allica',       group: 'ANE',      color: '#fbbf24' },
+  { key: 'ane_ibkr',      name: 'ANE IBKR Trading', group: 'ANE',      color: '#fb923c' },
+  { key: 'mcd_hsbc',      name: 'MCD HSBC',         group: 'MCD',      color: '#a78bfa' },
+  { key: 'alm_hsbc',      name: 'ALM HSBC',         group: 'ALM',      color: '#34d399' },
+  { key: 'personal_tide', name: 'Personal Tide',    group: 'Personal', color: '#f472b6' },
+  { key: 'personal_bank', name: 'Personal Bank',    group: 'Personal', color: '#9ca3af' },
+];
+const STORAGE_KEY = 'aspireCashTracker_v1';
+
+/* -------------------- State -------------------- */
+let state = { entries: [] };
+let lineChart = null, barChart = null, historyChart = null;
+let fileHandle = null;          // current FileSystemFileHandle (connected, with permission)
+let pendingHandle = null;       // handle exists in IndexedDB but permission not yet granted
+let fileSupported = ('showSaveFilePicker' in window) && ('showOpenFilePicker' in window);
+
+/* -------------------- IndexedDB (stores file handle across sessions) -------------------- */
+const IDB_NAME = 'aspireCashTracker_idb';
+const IDB_STORE = 'handles';
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(IDB_STORE);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+    tx.onsuccess = () => res(tx.result);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbSet(key, value) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(value, key);
+    tx.onsuccess = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbDel(key) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(key);
+    tx.onsuccess = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+/* -------------------- File System Access helpers -------------------- */
+async function ensurePermission(handle, mode) {
+  const opts = { mode };
+  if ((await handle.queryPermission(opts)) === 'granted') return true;
+  return (await handle.requestPermission(opts)) === 'granted';
+}
+async function readHandle(handle) {
+  if (!(await ensurePermission(handle, 'read'))) throw new Error('Read permission denied');
+  const file = await handle.getFile();
+  const text = await file.text();
+  if (!text.trim()) return { entries: [] };
+  return JSON.parse(text);
+}
+async function writeHandle(handle, data) {
+  if (!(await ensurePermission(handle, 'readwrite'))) throw new Error('Write permission denied');
+  const writable = await handle.createWritable();
+  await writable.write(JSON.stringify(data, null, 2));
+  await writable.close();
+}
+
+async function pickNewOrExistingFile() {
+  // Offer the user save (create new / overwrite) — most flexible
+  const handle = await window.showSaveFilePicker({
+    suggestedName: 'cash-tracker-data.json',
+    types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+  });
+  return handle;
+}
+async function pickExistingFile() {
+  const [handle] = await window.showOpenFilePicker({
+    types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+    multiple: false
+  });
+  return handle;
+}
+
+/* -------------------- Storage banner & connect flow -------------------- */
+function setBanner(html, kind) {
+  const el = document.getElementById('storage-banner');
+  if (!html) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  el.style.background = kind === 'warn' ? 'rgba(248,113,113,0.08)' : 'rgba(201,162,39,0.08)';
+  el.style.color = kind === 'warn' ? 'var(--red)' : 'var(--accent)';
+  el.innerHTML = html;
+}
+function setConnectBtn(label, isConnected) {
+  const b = document.getElementById('connect-btn');
+  b.textContent = label;
+  b.classList.toggle('secondary', !!isConnected);
+}
+
+async function onConnectClick() {
+  if (fileHandle) {
+    // Currently connected — offer to disconnect
+    if (!confirm('Disconnect the data file? Saves will go back to browser storage only. The file itself will not be deleted.')) return;
+    fileHandle = null;
+    pendingHandle = null;
+    await idbDel('dataFileHandle');
+    refreshConnectionUI();
+    return;
+  }
+  if (pendingHandle) {
+    // We have a stored handle waiting for permission — call reconnect instead
+    return reconnectStored();
+  }
+  if (!fileSupported) {
+    return toast('This browser does not support the File System API. Use Chrome or Edge.', true);
+  }
+  // Ask: create new or open existing?
+  const choice = confirm('OK = create a NEW data file (or overwrite one).\nCancel = open an EXISTING data file (e.g. one you previously used).');
+  try {
+    const handle = choice ? await pickNewOrExistingFile() : await pickExistingFile();
+    if (!handle) return;
+    fileHandle = handle;
+    pendingHandle = null;
+    await idbSet('dataFileHandle', handle);
+
+    if (choice) {
+      // New file — write current state into it (migrates any localStorage data)
+      await writeHandle(handle, state);
+      toast('Connected — your data is now in ' + handle.name);
+    } else {
+      // Existing file — load from it (overwrites in-memory state)
+      try {
+        const loaded = await readHandle(handle);
+        if (loaded && Array.isArray(loaded.entries)) {
+          if (state.entries.length && !confirm(`This file has ${loaded.entries.length} entries. Replace the current ${state.entries.length} entries with the file's data?`)) {
+            // user said no — write current state to file instead
+            await writeHandle(handle, state);
+          } else {
+            state = loaded;
+          }
+        }
+      } catch (e) {
+        toast('Could not read file: ' + e.message, true);
+      }
+      persistLocal(); // mirror to localStorage
+      updateSubtitle();
+      applyDateChange();
+      renderDashboard();
+      renderHistory();
+      toast('Connected — loaded from ' + handle.name);
+    }
+    refreshConnectionUI();
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('Error: ' + e.message, true);
+  }
+}
+
+function refreshConnectionUI() {
+  if (fileHandle) {
+    setConnectBtn('✓ ' + fileHandle.name, true);
+    setBanner(`Saving to <strong>${escapeHtml(fileHandle.name)}</strong> on disk. localStorage is mirrored as a backup. <a href="#" onclick="onConnectClick();return false;" style="color:inherit;text-decoration:underline;">Disconnect</a>`);
+  } else if (pendingHandle) {
+    // We have a stored handle but permission is needed — show a Reconnect prompt
+    setConnectBtn('Reconnect ' + pendingHandle.name, false);
+    setBanner(`A data file was previously connected (<strong>${escapeHtml(pendingHandle.name)}</strong>). Click <a href="#" onclick="reconnectStored();return false;" style="color:inherit;text-decoration:underline;"><strong>Reconnect</strong></a> to grant access and load your saved data. <a href="#" onclick="forgetStoredHandle();return false;" style="color:var(--muted);text-decoration:underline;margin-left:12px;">Forget this file</a>`);
+  } else if (location.protocol !== 'file:') {
+    // Deployed (https://) — FSA not applicable. Data loaded from bundled snapshot + localStorage.
+    // Any edits here save to browser localStorage only; use Mac + FSA to push permanent updates.
+    setConnectBtn('Read-only view', true);
+    setBanner('Viewing a read-only snapshot. Any edits save to browser storage on this device only — use the Mac to enter data and redeploy for permanent saves.');
+  } else {
+    setConnectBtn('Connect data file', false);
+    if (!fileSupported) {
+      setBanner('Your browser doesn\'t support the File System API. Data will only be saved to browser storage (vulnerable to clearing). Use Chrome or Edge for persistent file storage.', 'warn');
+    } else {
+      setBanner('Your data is currently saved only to browser storage, which can be lost if the file URL changes. Click <a href="#" onclick="onConnectClick();return false;" style="color:inherit;text-decoration:underline;"><strong>Connect data file</strong></a> to save to a permanent file on disk.', 'warn');
+    }
+  }
+}
+
+async function forgetStoredHandle() {
+  if (!confirm('Forget the previously-connected data file? This only clears the reference — the file itself stays on disk.')) return;
+  pendingHandle = null;
+  await idbDel('dataFileHandle');
+  refreshConnectionUI();
+}
+
+/* -------------------- Init -------------------- */
+async function init() {
+  loadStateFromLocal();           // load localStorage first as a safety net
+
+  // Web-deploy fallback: on https:// (Cloudflare), the File System Access
+  // API isn't usable (especially on iOS Safari), so fetch a bundled
+  // ./data.json snapshot baked in at deploy time. This gives the phone a
+  // read-only view of the latest cash position. On file:// (local Mac)
+  // this branch is skipped — the existing FSA + localStorage flow runs.
+  if (location.protocol !== 'file:') {
+    try {
+      const res = await fetch('./data.json', { cache: 'no-store' });
+      if (res.ok) {
+        const loaded = await res.json();
+        if (loaded && Array.isArray(loaded.entries)) {
+          // Only adopt the snapshot if it's newer than (or differs from)
+          // anything we already have in localStorage on this device.
+          const localCount = (state && state.entries) ? state.entries.length : 0;
+          if (!localCount || loaded.entries.length >= localCount) {
+            state = loaded;
+            persistLocal();
+          }
+        }
+      }
+    } catch (e) { /* offline / missing — fall back to whatever's in localStorage */ }
+  }
+
+  setTodayAsDefault();
+  renderExpectedList([]);
+  wireTabs();
+  updateSubtitle();
+  applyDateChange();
+  renderDashboard();
+  renderHistory();
+
+  // Try to reconnect to a previously connected data file
+  try {
+    const stored = await idbGet('dataFileHandle');
+    if (stored) {
+      // Permission may already be granted, or we may need a user gesture later.
+      const perm = await stored.queryPermission({ mode: 'readwrite' });
+      if (perm === 'granted') {
+        fileHandle = stored;
+        try {
+          const loaded = await readHandle(fileHandle);
+          if (loaded && Array.isArray(loaded.entries)) {
+            state = loaded;
+            persistLocal();
+            updateSubtitle();
+            applyDateChange();
+            renderDashboard();
+            renderHistory();
+          }
+        } catch (e) { /* ignore — banner will prompt */ }
+      } else {
+        // Permission is 'prompt' or 'denied' — needs a user gesture. Stash the handle and let refreshConnectionUI render the Reconnect banner.
+        fileHandle = null;
+        pendingHandle = stored;
+      }
+    }
+  } catch (e) { /* idb not available or other error */ }
+
+  refreshConnectionUI();
+}
+
+async function reconnectStored() {
+  try {
+    const stored = pendingHandle || await idbGet('dataFileHandle');
+    if (!stored) return refreshConnectionUI();
+    if (!(await ensurePermission(stored, 'readwrite'))) {
+      return toast('Permission denied', true);
+    }
+    fileHandle = stored;
+    pendingHandle = null;
+    const loaded = await readHandle(fileHandle);
+    if (loaded && Array.isArray(loaded.entries)) {
+      state = loaded;
+      persistLocal();
+      updateSubtitle();
+      applyDateChange();
+      renderDashboard();
+      renderHistory();
+    }
+    refreshConnectionUI();
+    toast('Reconnected — loaded from ' + fileHandle.name);
+  } catch (e) {
+    toast('Reconnect failed: ' + e.message, true);
+  }
+}
+
+// Prefills the form if an entry already exists for the currently selected date
+function applyDateChange() {
+  const date = document.getElementById('entry-date').value;
+  const existing = state.entries.find(en => en.weekEnding === date);
+  if (existing) {
+    ACCOUNTS.forEach(a => {
+      document.querySelector(`input[data-account="${a.key}"]`).value = existing.balances[a.key] ?? '';
+    });
+    renderExpectedList(existing.expected || []);
+    if (!(existing.expected && existing.expected.length)) addExpectedRow();
+  } else {
+    // no entry — make sure there's a blank expected row ready
+    if (!document.querySelectorAll('#expected-list .expected-row').length) addExpectedRow();
+  }
+  markEntryStatus();
+}
+
+function loadStateFromLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+    if (!state.entries) state.entries = [];
+  } catch (e) { state = { entries: [] }; }
+}
+function persistLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+async function persist() {
+  persistLocal(); // always keep localStorage as a backup mirror
+  if (fileHandle) {
+    try { await writeHandle(fileHandle, state); }
+    catch (e) {
+      toast('File write failed: ' + e.message + ' — saved to browser only', true);
+    }
+  }
+}
+
+function setTodayAsDefault() {
+  const d = new Date();
+  // default to Sunday of current week (UK convention: Monday-start, week ends Sunday)
+  const day = d.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  d.setDate(d.getDate() + diff);
+  document.getElementById('entry-date').value = d.toISOString().slice(0,10);
+}
+
+function wireTabs() {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('view-' + t.dataset.view).classList.add('active');
+      if (t.dataset.view === 'dashboard') renderDashboard();
+      if (t.dataset.view === 'history') renderHistory();
+    });
+  });
+}
+
+function updateSubtitle() {
+  const n = state.entries.length;
+  const latest = n ? state.entries[n-1].weekEnding : '—';
+  document.getElementById('subtitle').textContent =
+    n ? `${n} week${n===1?'':'s'} tracked · latest: ${fmtDate(latest)}`
+      : 'No entries yet · add your first weekly snapshot below';
+}
+
+/* -------------------- Entry Form -------------------- */
+function renderExpectedList(rows) {
+  const wrap = document.getElementById('expected-list');
+  wrap.innerHTML = '';
+  (rows || []).forEach(r => addExpectedRow(r));
+}
+function addExpectedRow(preset) {
+  const wrap = document.getElementById('expected-list');
+  const row = document.createElement('div');
+  row.className = 'expected-row';
+  row.innerHTML = `
+    <input type="text" placeholder="Source of Fund (e.g. Rent batch, HMRC refund)" value="${preset?.desc || ''}" />
+    <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" placeholder="0.00" value="${preset?.amount ?? ''}" /></div>
+    <input type="date" value="${preset?.date || ''}" />
+    <button class="remove-btn" title="Remove">×</button>
+  `;
+  row.querySelector('.remove-btn').addEventListener('click', () => row.remove());
+  wrap.appendChild(row);
+}
+
+function collectForm() {
+  const weekEnding = document.getElementById('entry-date').value;
+  const balances = {};
+  ACCOUNTS.forEach(a => {
+    const v = document.querySelector(`input[data-account="${a.key}"]`).value;
+    balances[a.key] = v === '' ? null : parseFloat(v);
+  });
+  const expected = [];
+  document.querySelectorAll('#expected-list .expected-row').forEach(r => {
+    const [descEl, amountEl, dateEl] = r.querySelectorAll('input');
+    const amt = amountEl.value === '' ? null : parseFloat(amountEl.value);
+    if (descEl.value || amt || dateEl.value) {
+      expected.push({ desc: descEl.value, amount: amt, date: dateEl.value });
+    }
+  });
+  return { weekEnding, balances, expected };
+}
+
+async function saveEntry() {
+  const entry = collectForm();
+  if (!entry.weekEnding) return toast('Please set a week-ending date', true);
+
+  // replace any existing entry with same week-ending date
+  const existingIdx = state.entries.findIndex(e => e.weekEnding === entry.weekEnding);
+  if (existingIdx >= 0) state.entries[existingIdx] = entry;
+  else state.entries.push(entry);
+  // keep sorted by date asc
+  state.entries.sort((a,b) => a.weekEnding.localeCompare(b.weekEnding));
+  await persist();
+  toast(existingIdx >= 0 ? 'Week updated' : 'Week saved');
+  updateSubtitle();
+  markEntryStatus();
+}
+
+function loadLastWeek() {
+  if (!state.entries.length) return toast('No previous entries yet', true);
+  const currentDate = document.getElementById('entry-date').value;
+  // Find the most recent entry BEFORE the currently selected week
+  const prior = state.entries.filter(e => e.weekEnding < currentDate);
+  if (!prior.length) return toast('No earlier entry to copy from', true);
+  const source = prior[prior.length - 1];
+  ACCOUNTS.forEach(a => {
+    const el = document.querySelector(`input[data-account="${a.key}"]`);
+    el.value = source.balances[a.key] ?? '';
+  });
+  // Don't carry old expected-inflow rows forward — start fresh for the new week
+  renderExpectedList([]);
+  addExpectedRow();
+  toast('Pre-filled balances from ' + fmtDate(source.weekEnding));
+}
+
+function clearForm() {
+  ACCOUNTS.forEach(a => { document.querySelector(`input[data-account="${a.key}"]`).value = ''; });
+  renderExpectedList([]);
+  toast('Form cleared');
+}
+
+function markEntryStatus() {
+  const date = document.getElementById('entry-date').value;
+  const existing = state.entries.find(e => e.weekEnding === date);
+  const el = document.getElementById('entry-status');
+  el.innerHTML = existing ? '<span class="chip green">✓ Saved — editing will update</span>' : '';
+}
+document.addEventListener('input', e => {
+  if (e.target.id === 'entry-date') applyDateChange();
+});
+
+/* -------------------- Dashboard -------------------- */
+function renderDashboard() {
+  const entries = state.entries;
+  renderStats(entries);
+  renderLineChart(entries);
+  renderBarChart(entries);
+  renderLatestBreakdown(entries);
+  renderExpectedBreakdown(entries);
+}
+
+function totalOf(entry) {
+  return ACCOUNTS.reduce((s, a) => s + (entry.balances[a.key] || 0), 0);
+}
+function groupTotal(entry, group) {
+  return ACCOUNTS.filter(a => a.group === group)
+    .reduce((s, a) => s + (entry.balances[a.key] || 0), 0);
+}
+function expectedTotal(entry) {
+  return (entry.expected || []).reduce((s, r) => s + (r.amount || 0), 0);
+}
+
+function renderStats(entries) {
+  const wrap = document.getElementById('summary-stats');
+  if (!entries.length) {
+    wrap.innerHTML = '<div class="stat"><div class="label">No data yet</div><div class="value">—</div><div class="delta">Add your first week to see stats</div></div>';
+    return;
+  }
+  const latest = entries[entries.length - 1];
+  const prev = entries.length > 1 ? entries[entries.length - 2] : null;
+  const total = totalOf(latest);
+  const prevTotal = prev ? totalOf(prev) : null;
+  const delta = prevTotal !== null ? total - prevTotal : null;
+
+  const cards = [];
+  cards.push({ highlight: true, label: 'Total Cash', value: fmtMoney(total), delta, deltaLabel: prev ? `vs ${fmtDate(prev.weekEnding)}` : '' });
+  ['MCR','ANE','MCD','ALM','Personal'].forEach(g => {
+    const v = groupTotal(latest, g);
+    const pv = prev ? groupTotal(prev, g) : null;
+    cards.push({ label: g, value: fmtMoney(v), delta: pv !== null ? v - pv : null });
+  });
+  cards.push({ label: 'Cash Expected', value: fmtMoney(expectedTotal(latest)), delta: null, deltaLabel: `${(latest.expected||[]).length} item${(latest.expected||[]).length===1?'':'s'}` });
+
+  wrap.innerHTML = cards.map(c => {
+    const deltaHtml = c.delta !== null && c.delta !== undefined
+      ? `<div class="delta ${c.delta >= 0 ? 'up' : 'down'}">${c.delta >= 0 ? '▲' : '▼'} ${fmtMoney(Math.abs(c.delta))} ${c.deltaLabel || ''}</div>`
+      : c.deltaLabel ? `<div class="delta">${c.deltaLabel}</div>` : '';
+    return `<div class="stat${c.highlight ? ' highlight' : ''}">
+      <div class="label">${c.label}</div>
+      <div class="value">${c.value}</div>
+      ${deltaHtml}
+    </div>`;
+  }).join('');
+}
+
+function renderLineChart(entries) {
+  const ctx = document.getElementById('lineChart');
+  const labels = entries.map(e => fmtDate(e.weekEnding));
+  const datasets = ACCOUNTS.map(a => ({
+    label: a.name,
+    data: entries.map(e => e.balances[a.key] ?? null),
+    borderColor: a.color,
+    backgroundColor: a.color + '33',
+    tension: 0.25,
+    spanGaps: true,
+    borderWidth: 2,
+    pointRadius: 3,
+  }));
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: chartOpts(true)
+  });
+}
+
+function renderBarChart(entries) {
+  const ctx = document.getElementById('barChart');
+  const labels = entries.map(e => fmtDate(e.weekEnding));
+  const datasets = ACCOUNTS.map(a => ({
+    label: a.name,
+    data: entries.map(e => e.balances[a.key] || 0),
+    backgroundColor: a.color,
+    borderColor: a.color,
+    borderWidth: 0,
+  }));
+  if (barChart) barChart.destroy();
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: { ...chartOpts(false), scales: {
+      x: { stacked: true, ticks: { color: '#5a6478' }, grid: { color: 'rgba(15,23,42,0.06)' } },
+      y: { stacked: true, ticks: { color: '#5a6478', callback: v => '£' + (v/1000).toFixed(0) + 'k' }, grid: { color: 'rgba(15,23,42,0.08)' } }
+    }}
+  });
+}
+
+function chartOpts(isLine) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#0f172a', font: { size: 11 }, boxWidth: 10, padding: 10 } },
+      tooltip: {
+        backgroundColor: '#ffffff',
+        borderColor: '#dde1e8',
+        borderWidth: 1,
+        titleColor: '#c9a227',
+        bodyColor: '#0f172a',
+        padding: 10,
+        callbacks: {
+          label: ctx => `${ctx.dataset.label}: ${fmtMoney(ctx.parsed.y || 0)}`,
+          footer: items => {
+            const total = items.reduce((s,i) => s + (i.parsed.y || 0), 0);
+            return 'Total: ' + fmtMoney(total);
+          }
+        }
+      }
+    },
+    scales: isLine ? {
+      x: { ticks: { color: '#8b93a7' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { ticks: { color: '#8b93a7', callback: v => '£' + (v/1000).toFixed(0) + 'k' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+    } : undefined
+  };
+}
+
+function renderLatestBreakdown(entries) {
+  const wrap = document.getElementById('latest-breakdown');
+  const weekEl = document.getElementById('latest-week');
+  if (!entries.length) { wrap.innerHTML = '<div class="empty-state"><h3>No entries yet</h3><div>Save your first week to see the breakdown here.</div></div>'; weekEl.textContent=''; return; }
+  const latest = entries[entries.length - 1];
+  weekEl.textContent = 'Week ending ' + fmtDate(latest.weekEnding);
+  let html = '<table><thead><tr><th>Account</th><th>Group</th><th>Balance</th></tr></thead><tbody>';
+  ACCOUNTS.forEach(a => {
+    const v = latest.balances[a.key];
+    html += `<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${a.color};margin-right:8px;"></span>${a.name}</td><td style="text-align:left;color:var(--muted)">${a.group}</td><td>${v == null ? '<span style="color:var(--muted)">—</span>' : fmtMoney(v)}</td></tr>`;
+  });
+  html += `<tr class="total-row"><td>Total</td><td></td><td>${fmtMoney(totalOf(latest))}</td></tr>`;
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderExpectedBreakdown(entries) {
+  const wrap = document.getElementById('expected-breakdown');
+  if (!entries.length) { wrap.innerHTML = ''; return; }
+  const latest = entries[entries.length - 1];
+  const list = latest.expected || [];
+  if (!list.length) { wrap.innerHTML = '<div style="color:var(--muted);padding:10px 0;">No expected inflows recorded for this week.</div>'; return; }
+  let html = '<table><thead><tr><th>Source of Fund</th><th>Date Expected</th><th>Expected Amount</th></tr></thead><tbody>';
+  list.forEach(r => {
+    html += `<tr><td>${escapeHtml(r.desc || '—')}</td><td style="text-align:left;color:var(--muted)">${r.date ? fmtDate(r.date) : '—'}</td><td>${r.amount ? fmtMoney(r.amount) : '—'}</td></tr>`;
+  });
+  html += `<tr class="total-row"><td>Total expected</td><td></td><td>${fmtMoney(expectedTotal(latest))}</td></tr>`;
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+/* -------------------- History -------------------- */
+function renderHistoryChart(entries) {
+  const ctx = document.getElementById('historyChart');
+  if (!ctx) return;
+  if (historyChart) historyChart.destroy();
+  if (!entries.length) return;
+  const labels = entries.map(e => fmtDate(e.weekEnding));
+  const totals = entries.map(e => totalOf(e));
+  const expected = entries.map(e => expectedTotal(e));
+  historyChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Total cash in bank',
+          data: totals,
+          borderColor: '#c9a227',
+          backgroundColor: 'rgba(201,162,39,0.12)',
+          fill: true,
+          tension: 0.25,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#c9a227',
+        },
+        {
+          label: 'Total expected inflows',
+          data: expected,
+          borderColor: '#34d399',
+          backgroundColor: 'rgba(52,211,153,0.08)',
+          fill: true,
+          tension: 0.25,
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 3,
+          pointBackgroundColor: '#34d399',
+        }
+      ]
+    },
+    options: chartOpts(true)
+  });
+}
+
+function renderHistory() {
+  const table = document.getElementById('history-table');
+  const count = document.getElementById('history-count');
+  const entries = state.entries;
+  count.textContent = entries.length ? `${entries.length} week${entries.length===1?'':'s'}` : '';
+  renderHistoryChart(entries);
+  if (!entries.length) {
+    table.innerHTML = '<tr><td style="padding:40px;text-align:center;color:var(--muted);">No entries yet.</td></tr>';
+    return;
+  }
+  let head = '<tr><th>Week ending</th>';
+  ACCOUNTS.forEach(a => head += `<th title="${a.group}">${a.name}</th>`);
+  head += '<th>Total</th><th>Expected</th><th></th></tr>';
+  let body = '';
+  [...entries].reverse().forEach(e => {
+    body += `<tr><td>${fmtDate(e.weekEnding)}</td>`;
+    ACCOUNTS.forEach(a => {
+      const v = e.balances[a.key];
+      body += `<td>${v == null ? '<span style="color:var(--muted)">—</span>' : fmtMoney(v)}</td>`;
+    });
+    body += `<td><strong>${fmtMoney(totalOf(e))}</strong></td>`;
+    body += `<td>${fmtMoney(expectedTotal(e))}</td>`;
+    body += `<td><button class="btn danger" onclick="deleteEntry('${e.weekEnding}')">Delete</button></td></tr>`;
+  });
+  table.querySelector('thead').innerHTML = head;
+  table.querySelector('tbody').innerHTML = body;
+}
+
+async function deleteEntry(weekEnding) {
+  if (!confirm('Delete entry for ' + fmtDate(weekEnding) + '?')) return;
+  state.entries = state.entries.filter(e => e.weekEnding !== weekEnding);
+  await persist();
+  renderHistory();
+  renderDashboard();
+  updateSubtitle();
+  toast('Deleted');
+}
+
+/* -------------------- Import / Export -------------------- */
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `aspire-cash-tracker-${stamp}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported');
+}
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.entries || !Array.isArray(imported.entries)) throw new Error('Invalid format');
+      if (!confirm(`Import ${imported.entries.length} entries? This will REPLACE your current data.`)) return;
+      state = imported;
+      await persist();
+      updateSubtitle();
+      renderDashboard();
+      renderHistory();
+      toast('Imported ' + imported.entries.length + ' entries');
+    } catch (err) { toast('Invalid file: ' + err.message, true); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+/* -------------------- Helpers -------------------- */
+function fmtMoney(v) {
+  if (v == null || isNaN(v)) return '—';
+  return '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+}
+function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+init();
+
+// --- Data widget: Export / Import / Reset --------------------------------
+// Moves cash tracker state (aspireCashTracker_v1 in localStorage) between
+// devices. On Mac you also have the File System Access flow for the JSON
+// file on disk — this widget is the cross-device bridge for the iPhone.
+(function setupDataWidget() {
+  const KEYS = ['aspireCashTracker_v1'];
+  const SCHEMA = 'cash-tracker-v1';
+  function readAll(){const o={};KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!==null){try{o[k]=JSON.parse(v);}catch(_){o[k]=v;}}});return o;}
+  function writeAll(b){KEYS.forEach(k=>{if(b[k]!==undefined){const v=typeof b[k]==='string'?b[k]:JSON.stringify(b[k]);localStorage.setItem(k,v);}});}
+  function deviceTag(){if(/iPhone|iPad|iPod/.test(navigator.userAgent))return'iOS';if(/Mac/.test(navigator.userAgent))return'Mac';if(/Android/.test(navigator.userAgent))return'Android';return'Other';}
+  function exportData(){
+    const payload={schema:SCHEMA,exportedAt:new Date().toISOString(),device:deviceTag(),data:readAll()};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const ts=new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+    const a=document.createElement('a');a.href=url;a.download='cash-tracker-'+ts+'.json';document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  }
+  function importData(){
+    const input=document.createElement('input');input.type='file';input.accept='.json,application/json';
+    input.onchange=async e=>{
+      const file=e.target.files&&e.target.files[0];if(!file)return;
+      try{
+        const parsed=JSON.parse(await file.text());
+        // Accept both our widget exports (schema=cash-tracker-v1) and raw data.json files
+        // (which have an `entries` array at the top level).
+        let payload;
+        if(parsed.schema===SCHEMA&&parsed.data){
+          payload=parsed.data;
+        } else if(Array.isArray(parsed.entries)){
+          payload={[KEYS[0]]:parsed};
+        } else {
+          alert("That file doesn't look like a Cash Tracker backup or data.json.");return;
+        }
+        const blob=payload[KEYS[0]];
+        const n=blob&&Array.isArray(blob.entries)?blob.entries.length:0;
+        if(!confirm('Import will REPLACE current state in this browser with '+n+' weekly entries'+(parsed.device?' (from '+parsed.device+', '+parsed.exportedAt+')':'')+'.\n\nExport first if you want a rollback. Proceed?'))return;
+        writeAll(payload);location.reload();
+      }catch(err){alert('Import failed: '+err.message);}
+    };
+    input.click();
+  }
+  function resetToDefaults(){
+    if(!confirm('Clear all saved entries in this browser?\n\nOn the deployed site, the bundled data.json snapshot will be re-loaded on next reload. Cannot be undone — Export first if you want a backup.'))return;
+    KEYS.forEach(k=>localStorage.removeItem(k));location.reload();
+  }
+  function btn(label,title,onClick){
+    const b=document.createElement('button');b.textContent=label;b.title=title;
+    b.style.cssText='background:#ffffff;color:#0f172a;border:1px solid #dde1e8;border-radius:5px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:inherit;line-height:1;';
+    b.onmouseover=()=>{b.style.borderColor='#3b82f6';};
+    b.onmouseout =()=>{b.style.borderColor='#dde1e8';};
+    b.onclick=onClick;return b;
+  }
+  const wrap=document.createElement('div');wrap.id='cash-data-widget';
+  wrap.style.cssText='position:fixed;bottom:14px;right:14px;display:flex;gap:6px;background:#ffffff;border:1px solid #dde1e8;border-radius:8px;padding:6px;z-index:9999;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 6px 18px rgba(15,23,42,0.10)';
+  wrap.appendChild(btn('⬇ Export','Download a JSON backup of all weekly entries',exportData));
+  wrap.appendChild(btn('⬆ Import','Restore from a backup or a raw data.json file',importData));
+  wrap.appendChild(btn('↺ Reset','Clear saved state in this browser',resetToDefaults));
+  document.body.appendChild(wrap);
+})();
+</script>
+</body>
+</html>

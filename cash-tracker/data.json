@@ -1,0 +1,96 @@
+{
+  "entries": [
+    {
+      "weekEnding": "2026-05-10",
+      "balances": {
+        "mcr_hsbc": 1760.71,
+        "mcr_allica": 227872.46,
+        "ane_hsbc": 2249.94,
+        "ane_allica": 353011.6,
+        "ane_ibkr": 346421.86,
+        "mcd_hsbc": 1245.75,
+        "alm_hsbc": 5000,
+        "personal_tide": 65.19,
+        "personal_bank": 4000
+      },
+      "expected": [
+        {
+          "desc": "Remortgage 97 Spencer Street ",
+          "amount": 90000,
+          "date": "2026-05-08"
+        },
+        {
+          "desc": "Remortgage 103 Biddlestone Road",
+          "amount": 40000,
+          "date": "2026-05-15"
+        },
+        {
+          "desc": "Remortgage 352 Rectory Road",
+          "amount": 58000,
+          "date": "2026-05-15"
+        },
+        {
+          "desc": "May Rent",
+          "amount": 65000,
+          "date": "2026-05-08"
+        },
+        {
+          "desc": "May Trading Profits",
+          "amount": 16000,
+          "date": "2026-05-29"
+        }
+      ]
+    },
+    {
+      "weekEnding": "2026-05-17",
+      "balances": {
+        "mcr_hsbc": 4029.53,
+        "mcr_allica": 264747.88,
+        "ane_hsbc": 66.82,
+        "ane_allica": 429744.11,
+        "ane_ibkr": 388248.36,
+        "mcd_hsbc": 100.98,
+        "alm_hsbc": 5000,
+        "personal_tide": 65.19,
+        "personal_bank": 3969.36
+      },
+      "expected": [
+        {
+          "desc": "trading to end of May ",
+          "amount": 10000,
+          "date": "2026-05-31"
+        },
+        {
+          "desc": "Remortgage 352 Rectory ",
+          "amount": 38000,
+          "date": "2026-05-21"
+        },
+        {
+          "desc": "Remortgage 103 Biddlestone",
+          "amount": 58000,
+          "date": "2026-05-21"
+        }
+      ]
+    },
+    {
+      "weekEnding": "2026-05-24",
+      "balances": {
+        "mcr_hsbc": 2783.44,
+        "mcr_allica": 260747.88,
+        "ane_hsbc": 4565.92,
+        "ane_allica": 414744.71,
+        "ane_ibkr": 396817.58,
+        "mcd_hsbc": 1956.98,
+        "alm_hsbc": 5000,
+        "personal_tide": 1680.3,
+        "personal_bank": 2725.89
+      },
+      "expected": [
+        { "desc": "Monthly Rent", "amount": 70000, "date": "2026-06-05" },
+        { "desc": "Remortgage 103 Biddlestone Road", "amount": 38000, "date": "2026-05-29" },
+        { "desc": "Remortgage 352 Rectory Road ", "amount": 60000, "date": "2026-06-05" },
+        { "desc": "Income from Trading", "amount": 10000, "date": "2026-06-05" }
+      ]
+    }
+  ]
+}

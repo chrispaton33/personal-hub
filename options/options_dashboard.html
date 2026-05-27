@@ -1,0 +1,5960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Options Trading Dashboard — Aspire</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0f1e;color:#e2e8f0;font-family:'Inter',sans-serif;font-size:14px}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:#1e293b}
+  ::-webkit-scrollbar-thumb{background:#475569;border-radius:3px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .tab-active{background:#1e40af;color:#fff}
+  .tab-inactive{background:#1e293b;color:#94a3b8}
+  .tab-inactive:hover{background:#253347;color:#cbd5e1}
+  .card{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:20px}
+  .card-sm{background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:14px}
+  .btn-primary{background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:500;transition:background 0.15s}
+  .btn-primary:hover{background:#2563eb}
+  .btn-danger{background:#991b1b;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px}
+  .btn-danger:hover{background:#dc2626}
+  .btn-ghost{background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px}
+  .btn-ghost:hover{border-color:#64748b;color:#e2e8f0}
+  .btn-success{background:#166534;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:500}
+  .btn-success:hover{background:#15803d}
+  input,select,textarea{background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:8px 12px;font-size:13px;width:100%;outline:none;font-family:inherit}
+  input:focus,select:focus{border-color:#3b82f6}
+  select option{background:#1e293b}
+  table{width:100%;border-collapse:collapse}
+  th{background:#0f172a;color:#64748b;text-align:left;padding:10px 12px;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #1e293b;position:sticky;top:0;z-index:1}
+  td{padding:9px 12px;border-bottom:1px solid #0f172a;font-size:13px}
+  tr:hover td{background:#0f172a}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-win{background:#14532d;color:#4ade80}
+  .badge-loss{background:#450a0a;color:#f87171}
+  .badge-open{background:#1e3a5f;color:#60a5fa}
+  .badge-closed{background:#1e293b;color:#64748b}
+  .badge-exp{background:#422006;color:#fb923c}
+  .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100}
+  .modal{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:28px;width:90%;max-width:680px;max-height:90vh;overflow-y:auto}
+  .sweet-green{background:#052e16;color:#4ade80;border:1px solid #166534}
+  .sweet-yellow{background:#1c1917;color:#fbbf24;border:1px solid #92400e}
+  .metric-card{background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;border-radius:10px;padding:18px 22px;position:relative;overflow:hidden}
+  .metric-card::after{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(59,130,246,0.05)}
+  .progress-bar{background:#1e293b;border-radius:3px;height:6px;overflow:hidden}
+  .progress-fill{height:100%;border-radius:3px;transition:width 0.5s}
+  .ticker-chip{display:inline-block;background:#1e293b;color:#93c5fd;border-radius:4px;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500}
+  .entity-ANE{background:#1e3a5f;color:#60a5fa}
+  .entity-CP{background:#14532d;color:#4ade80}
+  .entity-Personal{background:#3b0764;color:#c084fc}
+  .hl-best{background:#052e16 !important}
+  .hl-good{background:#0c1a0c !important}
+  .section-header{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px}
+  .chart-container{position:relative;height:200px}
+  .chart-container-lg{position:relative;height:260px}
+  .print-only{display:none}
+  @media print{.no-print{display:none}.print-only{display:block}}
+</style>
+</head>
+<body>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#94a3b8;font-family:sans-serif;font-size:1.1rem;">Loading dashboard...</div></div>
+<script>
+window.onerror=function(msg,src,line,col,err){
+  document.getElementById('root').innerHTML='<div style="padding:2rem;color:#f87171;font-family:monospace;background:#0f172a;min-height:100vh"><h2>JS Error</h2><pre>'+msg+'\n'+src+':'+line+'</pre></div>';
+  return false;
+};
+const {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback
+} = React;
+
+// --- Black-Scholes -----------------------------------------------------------
+function normCDF(x) {
+  const a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429];
+  const p = 0.3275911,
+    s = x < 0 ? -1 : 1;
+  x = Math.abs(x) / Math.SQRT2;
+  const t = 1 / (1 + p * x);
+  let y = t * (a[0] + t * (a[1] + t * (a[2] + t * (a[3] + t * a[4]))));
+  y = 1 - y * Math.exp(-x * x);
+  return 0.5 * (1 + s * y);
+}
+function bsPut(S, K, T, sigma, r = 0.05) {
+  if (T <= 0) return {
+    price: Math.max(K - S, 0),
+    delta: K > S ? -1 : 0,
+    probOTM: K > S ? 0 : 1
+  };
+  const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.sqrt(T));
+  const d2 = d1 - sigma * Math.sqrt(T);
+  const price = K * Math.exp(-r * T) * normCDF(-d2) - S * normCDF(-d1);
+  return {
+    price: Math.max(price, 0),
+    delta: normCDF(-d1) - 1,
+    probOTM: normCDF(d2)
+  };
+}
+
+// --- Seed Data ----------------------------------------------------------------
+const SEED_TRADES = [
+// -- FEB 17-20: First trades --
+{
+  id: 1,
+  entity: 'ANE',
+  date_entry: '2026-02-17',
+  date_expiry: '2026-02-18',
+  ticker: 'NVDA',
+  contracts: 1,
+  price_entry: null,
+  strike: 177.5,
+  capital: 17750,
+  credit_pc: 1.40,
+  total_credit: 140,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 139.23,
+  comment: 'Expired worthless'
+}, {
+  id: 2,
+  entity: 'ANE',
+  date_entry: '2026-02-17',
+  date_expiry: '2026-02-20',
+  ticker: 'AMD',
+  contracts: 3,
+  price_entry: null,
+  strike: 185,
+  capital: 55500,
+  credit_pc: 0.67,
+  total_credit: 201,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 197.44,
+  comment: 'Expired worthless'
+}, {
+  id: 3,
+  entity: 'ANE',
+  date_entry: '2026-02-17',
+  date_expiry: '2026-02-20',
+  ticker: 'HOOD',
+  contracts: 10,
+  price_entry: null,
+  strike: 67,
+  capital: 67000,
+  credit_pc: 0.25,
+  total_credit: 250,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 229.97,
+  comment: 'BTC $0.01'
+}, {
+  id: 4,
+  entity: 'ANE',
+  date_entry: '2026-02-19',
+  date_expiry: '2026-02-20',
+  ticker: 'NVDA',
+  contracts: 2,
+  price_entry: null,
+  strike: 180,
+  capital: 36000,
+  credit_pc: 0.57,
+  total_credit: 114,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 111.82,
+  comment: 'Expired worthless'
+}, {
+  id: 5,
+  entity: 'ANE',
+  date_entry: '2026-02-19',
+  date_expiry: '2026-02-27',
+  ticker: 'CRWV',
+  contracts: 3,
+  price_entry: null,
+  strike: 71,
+  capital: 21300,
+  credit_pc: 1.30,
+  total_credit: 390,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 380.48,
+  comment: 'BTC $0.03'
+},
+// -- FEB 23-27 --
+{
+  id: 6,
+  entity: 'ANE',
+  date_entry: '2026-02-23',
+  date_expiry: '2026-02-27',
+  ticker: 'IREN',
+  contracts: 3,
+  price_entry: null,
+  strike: 34,
+  capital: 10200,
+  credit_pc: 0.33,
+  total_credit: 99,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 92.11,
+  comment: 'BTC $0.01'
+}, {
+  id: 7,
+  entity: 'ANE',
+  date_entry: '2026-02-23',
+  date_expiry: '2026-02-27',
+  ticker: 'HOOD',
+  contracts: 10,
+  price_entry: null,
+  strike: 67,
+  capital: 67000,
+  credit_pc: 0.38,
+  total_credit: 380,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 350.49,
+  comment: 'BTC $0.01'
+}, {
+  id: 8,
+  entity: 'ANE',
+  date_entry: '2026-02-23',
+  date_expiry: '2026-02-27',
+  ticker: 'SOFI',
+  contracts: 40,
+  price_entry: null,
+  strike: 17,
+  capital: 68000,
+  credit_pc: 0.12,
+  total_credit: 480,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 360.03,
+  comment: 'BTC $0.02'
+}, {
+  id: 9,
+  entity: 'ANE',
+  date_entry: '2026-02-24',
+  date_expiry: '2026-02-27',
+  ticker: 'IREN',
+  contracts: 1,
+  price_entry: null,
+  strike: 37,
+  capital: 3700,
+  credit_pc: 0.37,
+  total_credit: 37,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 33.96,
+  comment: 'BTC $0.01'
+}, {
+  id: 10,
+  entity: 'ANE',
+  date_entry: '2026-02-25',
+  date_expiry: '2026-02-27',
+  ticker: 'TTD',
+  contracts: 3,
+  price_entry: null,
+  strike: 20,
+  capital: 6000,
+  credit_pc: 0.26,
+  total_credit: 78,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 71.27,
+  comment: 'BTC $0.02'
+}, {
+  id: 11,
+  entity: 'ANE',
+  date_entry: '2026-02-26',
+  date_expiry: '2026-02-27',
+  ticker: 'CRWV',
+  contracts: 2,
+  price_entry: null,
+  strike: 79,
+  capital: 15800,
+  credit_pc: 1.16,
+  total_credit: 232,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -320.80,
+  comment: 'BTC $2.75 -- stock moved against'
+},
+// -- MAR 9-13 --
+{
+  id: 12,
+  entity: 'ANE',
+  date_entry: '2026-03-09',
+  date_expiry: '2026-03-13',
+  ticker: 'AMD',
+  contracts: 5,
+  price_entry: null,
+  strike: 180,
+  capital: 90000,
+  credit_pc: 0.97,
+  total_credit: 485,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 481.49,
+  comment: 'Expired worthless'
+}, {
+  id: 13,
+  entity: 'ANE',
+  date_entry: '2026-03-09',
+  date_expiry: '2026-03-13',
+  ticker: 'HOOD',
+  contracts: 18,
+  price_entry: null,
+  strike: 69,
+  capital: 124200,
+  credit_pc: 0.44,
+  total_credit: 792,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 779.33,
+  comment: 'Expired worthless'
+}, {
+  id: 14,
+  entity: 'ANE',
+  date_entry: '2026-03-09',
+  date_expiry: '2026-03-13',
+  ticker: 'NVDA',
+  contracts: 8,
+  price_entry: null,
+  strike: 170,
+  capital: 136000,
+  credit_pc: 0.99,
+  total_credit: 792,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 783.08,
+  comment: 'Expired worthless'
+}, {
+  id: 15,
+  entity: 'ANE',
+  date_entry: '2026-03-09',
+  date_expiry: '2026-03-13',
+  ticker: 'IREN',
+  contracts: 15,
+  price_entry: null,
+  strike: 31,
+  capital: 46500,
+  credit_pc: 0.32,
+  total_credit: 480,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 469.48,
+  comment: 'Expired worthless'
+}, {
+  id: 16,
+  entity: 'ANE',
+  date_entry: '2026-03-10',
+  date_expiry: '2026-03-13',
+  ticker: 'HOOD',
+  contracts: 5,
+  price_entry: null,
+  strike: 73,
+  capital: 36500,
+  credit_pc: 0.40,
+  total_credit: 200,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 196.49,
+  comment: 'Expired worthless'
+}, {
+  id: 17,
+  entity: 'ANE',
+  date_entry: '2026-03-10',
+  date_expiry: '2026-03-13',
+  ticker: 'SOFI',
+  contracts: 20,
+  price_entry: null,
+  strike: 16.5,
+  capital: 33000,
+  credit_pc: 0.07,
+  total_credit: 140,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 128.98,
+  comment: 'Expired worthless'
+}, {
+  id: 18,
+  entity: 'ANE',
+  date_entry: '2026-03-10',
+  date_expiry: '2026-03-13',
+  ticker: 'NBIS',
+  contracts: 5,
+  price_entry: null,
+  strike: 85,
+  capital: 42500,
+  credit_pc: 0.68,
+  total_credit: 340,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 336.49,
+  comment: 'Expired worthless'
+}, {
+  id: 19,
+  entity: 'ANE',
+  date_entry: '2026-03-11',
+  date_expiry: '2026-03-13',
+  ticker: 'IREN',
+  contracts: 11,
+  price_entry: null,
+  strike: 36,
+  capital: 39600,
+  credit_pc: 0.21,
+  total_credit: 231,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 226.37,
+  comment: 'Expired worthless'
+},
+// -- MAR 16-20 --
+{
+  id: 20,
+  entity: 'ANE',
+  date_entry: '2026-03-16',
+  date_expiry: '2026-03-20',
+  ticker: 'AMD',
+  contracts: 7,
+  price_entry: null,
+  strike: 180,
+  capital: 126000,
+  credit_pc: 0.92,
+  total_credit: 644,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 626.37,
+  comment: 'BTC $0.02'
+}, {
+  id: 21,
+  entity: 'ANE',
+  date_entry: '2026-03-16',
+  date_expiry: '2026-03-20',
+  ticker: 'IREN',
+  contracts: 20,
+  price_entry: null,
+  strike: 37,
+  capital: 74000,
+  credit_pc: 0.31,
+  total_credit: 620,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 580.02,
+  comment: 'BTC $0.01'
+}, {
+  id: 22,
+  entity: 'ANE',
+  date_entry: '2026-03-16',
+  date_expiry: '2026-03-20',
+  ticker: 'SOFI',
+  contracts: 40,
+  price_entry: null,
+  strike: 15.5,
+  capital: 62000,
+  credit_pc: 0.13,
+  total_credit: 520,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 430.78,
+  comment: 'BTC $0.01'
+}, {
+  id: 23,
+  entity: 'ANE',
+  date_entry: '2026-03-16',
+  date_expiry: '2026-03-20',
+  ticker: 'NBIS',
+  contracts: 5,
+  price_entry: null,
+  strike: 112,
+  capital: 56000,
+  credit_pc: 0.84,
+  total_credit: 420,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 378.74,
+  comment: 'BTC $0.07'
+}, {
+  id: 24,
+  entity: 'ANE',
+  date_entry: '2026-03-16',
+  date_expiry: '2026-03-20',
+  ticker: 'HOOD',
+  contracts: 27,
+  price_entry: null,
+  strike: 68,
+  capital: 183600,
+  credit_pc: 0.47,
+  total_credit: 1276,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 1197.77,
+  comment: '2 lots x20@$0.47 + x7@$0.48 -- BTC $0.02/$0.01'
+}, {
+  id: 25,
+  entity: 'ANE',
+  date_entry: '2026-03-18',
+  date_expiry: '2026-03-20',
+  ticker: 'NVDA',
+  contracts: 3,
+  price_entry: null,
+  strike: 180,
+  capital: 54000,
+  credit_pc: 1.76,
+  total_credit: 528,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -718.96,
+  comment: 'BTC $4.15 -- rolled to 27MAR 177.5P'
+},
+// -- MAR 20-27: Rolls into volatility --
+{
+  id: 26,
+  entity: 'ANE',
+  date_entry: '2026-03-20',
+  date_expiry: '2026-03-27',
+  ticker: 'NVDA',
+  contracts: 15,
+  price_entry: null,
+  strike: 175,
+  capital: 262500,
+  credit_pc: 2.93,
+  total_credit: 4395,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -6276.03,
+  comment: 'BTC $7.10 -- rolled to APR08 175P'
+}, {
+  id: 27,
+  entity: 'ANE',
+  date_entry: '2026-03-20',
+  date_expiry: '2026-03-27',
+  ticker: 'HOOD',
+  contracts: 20,
+  price_entry: null,
+  strike: 63,
+  capital: 126000,
+  credit_pc: 0.60,
+  total_credit: 1200,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 1156.18,
+  comment: 'BTC $0.01'
+}, {
+  id: 28,
+  entity: 'ANE',
+  date_entry: '2026-03-20',
+  date_expiry: '2026-03-27',
+  ticker: 'NVDA',
+  contracts: 3,
+  price_entry: null,
+  strike: 177.5,
+  capital: 53250,
+  credit_pc: 4.22,
+  total_credit: 1266,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -1755.23,
+  comment: 'Roll from 20MAR 180P -- BTC $10.06 -- rolled to APR10 177.5P'
+}, {
+  id: 29,
+  entity: 'ANE',
+  date_entry: '2026-03-23',
+  date_expiry: '2026-03-27',
+  ticker: 'MU',
+  contracts: 2,
+  price_entry: null,
+  strike: 375,
+  capital: 75000,
+  credit_pc: 4.42,
+  total_credit: 884,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -2454.80,
+  comment: 'BTC $16.68 -- rolled to APR10 365P'
+}, {
+  id: 30,
+  entity: 'ANE',
+  date_entry: '2026-03-26',
+  date_expiry: '2026-03-27',
+  ticker: 'CRWV',
+  contracts: 9,
+  price_entry: null,
+  strike: 79,
+  capital: 71100,
+  credit_pc: 0.31,
+  total_credit: 279,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -3663.68,
+  comment: 'BTC $4.37 -- rolled to APR10 76P'
+},
+// -- MAR 27 Rolls: Captured high IV --
+{
+  id: 31,
+  entity: 'ANE',
+  date_entry: '2026-03-27',
+  date_expiry: '2026-04-08',
+  ticker: 'NVDA',
+  contracts: 15,
+  price_entry: null,
+  strike: 175,
+  capital: 262500,
+  credit_pc: 8.70,
+  total_credit: 13050,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 9968.94,
+  comment: 'Roll from 27MAR 175P @ $8.70 -- BTC $2.04 -- rolled to APR10 175P'
+}, {
+  id: 32,
+  entity: 'ANE',
+  date_entry: '2026-03-27',
+  date_expiry: '2026-04-10',
+  ticker: 'NVDA',
+  contracts: 3,
+  price_entry: null,
+  strike: 177.5,
+  capital: 53250,
+  credit_pc: 11.28,
+  total_credit: 3384,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 3306.23,
+  comment: 'Roll from 27MAR 177.5P @ $11.28 -- BTC $0.25'
+}, {
+  id: 33,
+  entity: 'ANE',
+  date_entry: '2026-03-27',
+  date_expiry: '2026-04-10',
+  ticker: 'MU',
+  contracts: 2,
+  price_entry: null,
+  strike: 365,
+  capital: 73000,
+  credit_pc: 22.18,
+  total_credit: 4436,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 4385.20,
+  comment: 'Roll from 27MAR 375P @ $22.18 -- BTC $0.24'
+}, {
+  id: 34,
+  entity: 'ANE',
+  date_entry: '2026-03-27',
+  date_expiry: '2026-04-10',
+  ticker: 'CRWV',
+  contracts: 9,
+  price_entry: null,
+  strike: 76,
+  capital: 68400,
+  credit_pc: 5.74,
+  total_credit: 5166,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 5091.73,
+  comment: 'Roll from 27MAR 79P @ $5.74 -- BTC $0.07'
+},
+// -- APR 1-2: HOOD & NVDA entries --
+{
+  id: 35,
+  entity: 'ANE',
+  date_entry: '2026-03-31',
+  date_expiry: '2026-04-10',
+  ticker: 'HOOD',
+  contracts: 36,
+  price_entry: null,
+  strike: 62,
+  capital: 223200,
+  credit_pc: 0.75,
+  total_credit: 2684,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 2593.26,
+  comment: '2 lots x16@$0.99 (31Mar) + x20@$0.55 (1Apr) -- BTC $0.02'
+}, {
+  id: 36,
+  entity: 'ANE',
+  date_entry: '2026-04-02',
+  date_expiry: '2026-04-10',
+  ticker: 'NVDA',
+  contracts: 15,
+  price_entry: null,
+  strike: 175,
+  capital: 262500,
+  credit_pc: 2.70,
+  total_credit: 4050,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 3948.34,
+  comment: 'Roll from APR08 175P @ $2.70 -- BTC $0.06'
+},
+// -- CURRENTLY OPEN -- APR 17 expiry --
+{
+  id: 37,
+  entity: 'ANE',
+  date_entry: '2026-04-09',
+  date_expiry: '2026-04-17',
+  ticker: 'HOOD',
+  contracts: 10,
+  price_entry: null,
+  strike: 62,
+  capital: 62000,
+  credit_pc: 0.57,
+  total_credit: 570,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 460,
+  comment: 'BTC 10@$0.11'
+}, {
+  id: 38,
+  entity: 'ANE',
+  date_entry: '2026-04-09',
+  date_expiry: '2026-04-17',
+  ticker: 'HOOD',
+  contracts: 14,
+  price_entry: null,
+  strike: 63,
+  capital: 88200,
+  credit_pc: 0.55,
+  total_credit: 770,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 728,
+  comment: 'BTC 14@$0.03'
+}, {
+  id: 39,
+  entity: 'ANE',
+  date_entry: '2026-04-09',
+  date_expiry: '2026-04-17',
+  ticker: 'HOOD',
+  contracts: 16,
+  price_entry: null,
+  strike: 64,
+  capital: 102400,
+  credit_pc: 0.64,
+  total_credit: 1024,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 959.99,
+  comment: 'BTC 5@$0.03 + 11@$0.03'
+}, {
+  id: 40,
+  entity: 'ANE',
+  date_entry: '2026-04-09',
+  date_expiry: '2026-04-17',
+  ticker: 'MU',
+  contracts: 6,
+  price_entry: null,
+  strike: 375,
+  capital: 225000,
+  credit_pc: 3.34,
+  total_credit: 2004,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 1926,
+  comment: 'BTC 6@$0.13 — rolled to APR24 405P'
+}, {
+  id: 41,
+  entity: 'ANE',
+  date_entry: '2026-04-10',
+  date_expiry: '2026-04-17',
+  ticker: 'IREN',
+  contracts: 28,
+  price_entry: null,
+  strike: 32,
+  capital: 89600,
+  credit_pc: 0.30,
+  total_credit: 840,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 756,
+  comment: 'BTC 28@$0.03'
+}, {
+  id: 42,
+  entity: 'ANE',
+  date_entry: '2026-04-10',
+  date_expiry: '2026-04-17',
+  ticker: 'PLTR',
+  contracts: 8,
+  price_entry: null,
+  strike: 118,
+  capital: 94400,
+  credit_pc: 0.97,
+  total_credit: 776,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 569.68,
+  comment: 'BTC 7@$0.25 + 1@$0.22'
+}, {
+  id: 43,
+  entity: 'ANE',
+  date_entry: '2026-04-10',
+  date_expiry: '2026-04-17',
+  ticker: 'NBIS',
+  contracts: 8,
+  price_entry: null,
+  strike: 124,
+  capital: 99200,
+  credit_pc: 0.89,
+  total_credit: 712,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 645.97,
+  comment: 'BTC 8@$0.08'
+}, {
+  id: 44,
+  entity: 'ANE',
+  date_entry: '2026-04-13',
+  date_expiry: '2026-04-17',
+  ticker: 'HOOD',
+  contracts: 8,
+  price_entry: null,
+  strike: 62,
+  capital: 49600,
+  credit_pc: 0.37,
+  total_credit: 296,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 208,
+  comment: 'BTC 8@$0.11'
+}, {
+  id: 45,
+  entity: 'ANE',
+  date_entry: '2026-04-13',
+  date_expiry: '2026-04-17',
+  ticker: 'SOFI',
+  contracts: 80,
+  price_entry: null,
+  strike: 15,
+  capital: 120000,
+  credit_pc: 0.06,
+  total_credit: 480,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'Win',
+  income: 220.05,
+  comment: 'BTC 80@$0.02'
+}, {
+  id: 46,
+  entity: 'ANE',
+  date_entry: '2026-04-13',
+  date_expiry: '2026-04-17',
+  ticker: 'NOW',
+  contracts: 21,
+  price_entry: null,
+  strike: 84,
+  capital: 176400,
+  credit_pc: 0.37,
+  total_credit: 777,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'Win',
+  income: 604.80,
+  comment: 'BTC 21@$0.08'
+}, {
+  id: 47,
+  entity: 'ANE',
+  date_entry: '2026-04-15',
+  date_expiry: '2026-04-24',
+  ticker: 'MU',
+  contracts: 7,
+  price_entry: null,
+  strike: 405,
+  capital: 283500,
+  credit_pc: 4.61,
+  total_credit: 3227,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'Win',
+  income: 2034.10,
+  comment: 'Roll from APR17 375P; BTC 7@$1.69 on 2026-04-21, rolled to MAY01 420P'
+}, {
+  id: 48,
+  entity: 'ANE',
+  date_entry: '2026-04-15',
+  date_expiry: '2026-04-24',
+  ticker: 'META',
+  contracts: 4,
+  price_entry: null,
+  strike: 650,
+  capital: 260000,
+  credit_pc: 5.56,
+  total_credit: 2224,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'Win',
+  income: 1882.35,
+  comment: 'BTC 4@$0.84 on 2026-04-22, rolled to MAY01 610P'
+}, {
+  id: 49,
+  entity: 'ANE',
+  date_entry: '2026-04-15',
+  date_expiry: '2026-04-24',
+  ticker: 'NVDA',
+  contracts: 9,
+  price_entry: null,
+  strike: 185,
+  capital: 166500,
+  credit_pc: 0.81,
+  total_credit: 729,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'Win',
+  income: 584.15,
+  comment: 'BTC 9@$0.15 on 2026-04-21'
+}, {
+  id: 50,
+  entity: 'ANE',
+  date_entry: '2026-04-15',
+  date_expiry: '2026-04-24',
+  ticker: 'CRWV',
+  contracts: 12,
+  price_entry: null,
+  strike: 97,
+  capital: 116400,
+  credit_pc: 0.86,
+  total_credit: 1032,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'Win',
+  income: 886.27,
+  comment: 'BTC 12@$0.11 on 2026-04-22'
+}, {
+  id: 51,
+  entity: 'ANE',
+  date_entry: '2026-04-21',
+  date_expiry: '2026-05-01',
+  ticker: 'MU',
+  contracts: 4,
+  price_entry: null,
+  strike: 420,
+  capital: 168000,
+  credit_pc: 2.38,
+  total_credit: 3996,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 3284,
+  comment: 'STO @$9.99; BTC 4@$1.78 on 2026-04-28, rolled to MAY08 430P'
+}, {
+  id: 52,
+  entity: 'ANE',
+  date_entry: '2026-04-21',
+  date_expiry: '2026-05-01',
+  ticker: 'MU',
+  contracts: 7,
+  price_entry: null,
+  strike: 420,
+  capital: 294000,
+  credit_pc: 2.47,
+  total_credit: 7252,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 6006,
+  comment: 'STO @$10.36, roll from APR24 405P; BTC 7@$1.78 on 2026-04-28, rolled to MAY08 430P'
+}, {
+  id: 53,
+  entity: 'ANE',
+  date_entry: '2026-04-22',
+  date_expiry: '2026-05-01',
+  ticker: 'META',
+  contracts: 4,
+  price_entry: null,
+  strike: 610,
+  capital: 244000,
+  credit_pc: 0.78,
+  total_credit: 1900,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -1077.06,
+  comment: 'STO @$4.75, roll from APR24 650P; BTC 4@$7.43 on 2026-04-30, rolled to MAY08 610P'
+}, {
+  id: 54,
+  entity: 'ANE',
+  date_entry: '2026-04-22',
+  date_expiry: '2026-05-01',
+  ticker: 'HOOD',
+  contracts: 15,
+  price_entry: null,
+  strike: 76,
+  capital: 114000,
+  credit_pc: 1.11,
+  total_credit: 1260,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'L',
+  income: -3977.30,
+  comment: 'STO @$0.84; BTC 15@$3.48 on 2026-04-30, rolled to MAY08 76P'
+},
+// -- APR 30: Calendar rolls (MAY01 → MAY08) --
+{
+  id: 55,
+  entity: 'ANE',
+  date_entry: '2026-04-30',
+  date_expiry: '2026-05-08',
+  ticker: 'META',
+  contracts: 4,
+  price_entry: 13.65,
+  strike: 610,
+  capital: 244000,
+  credit_pc: 2.24,
+  total_credit: 5460,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 1474.88,
+  comment: 'STO @$13.65, roll from MAY01 610P; BTC 4@$9.95 on 2026-05-06, rolled to MAY15 610P'
+}, {
+  id: 56,
+  entity: 'ANE',
+  date_entry: '2026-04-30',
+  date_expiry: '2026-05-08',
+  ticker: 'HOOD',
+  contracts: 15,
+  price_entry: 4.60,
+  strike: 76,
+  capital: 114000,
+  credit_pc: 0.61,
+  total_credit: 6900,
+  probability: null,
+  iv: null,
+  status: 'Open',
+  result: null,
+  income: 0,
+  comment: 'STO @$4.60, roll from MAY01 76P'
+},
+// -- APR 30 / MAY 04: MU MAY08 430P (roll from MAY01 420P — entry screenshot missing) --
+{
+  id: 57,
+  entity: 'ANE',
+  date_entry: '2026-04-28',
+  date_expiry: '2026-05-08',
+  ticker: 'MU',
+  contracts: 11,
+  price_entry: 6.40,
+  strike: 430,
+  capital: 473000,
+  credit_pc: 1.49,
+  total_credit: 7040,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 6786.62,
+  comment: 'STO @$6.40, roll from MAY01 420P; BTC 11@$0.22 on 2026-05-04'
+},
+// -- MAY 04: New MU MAY15 495P --
+{
+  id: 58,
+  entity: 'ANE',
+  date_entry: '2026-05-04',
+  date_expiry: '2026-05-15',
+  ticker: 'MU',
+  contracts: 10,
+  price_entry: 5.00,
+  strike: 495,
+  capital: 495000,
+  credit_pc: 1.01,
+  total_credit: 5000,
+  probability: null,
+  iv: null,
+  status: 'Closed',
+  result: 'W',
+  income: 3616.37,
+  comment: 'STO @$5.00; BTC 10@$1.37 on 2026-05-06'
+},
+// -- MAY 06: New positions --
+{
+  id: 59,
+  entity: 'ANE',
+  date_entry: '2026-05-06',
+  date_expiry: '2026-05-15',
+  ticker: 'MU',
+  contracts: 8,
+  price_entry: 6.83,
+  strike: 570,
+  capital: 456000,
+  credit_pc: 1.20,
+  total_credit: 5464,
+  probability: null,
+  iv: null,
+  status: 'Open',
+  result: null,
+  income: 0,
+  comment: 'STO @$6.83'
+}, {
+  id: 60,
+  entity: 'ANE',
+  date_entry: '2026-05-06',
+  date_expiry: '2026-05-15',
+  ticker: 'META',
+  contracts: 4,
+  price_entry: 14.66,
+  strike: 610,
+  capital: 244000,
+  credit_pc: 2.40,
+  total_credit: 5864,
+  probability: null,
+  iv: null,
+  status: 'Open',
+  result: null,
+  income: 0,
+  comment: 'STO @$14.66, roll from MAY08 610P'
+}];
+const SEED_STOCKS = [{
+  ticker: 'HOOD',
+  sector: 'Fintech',
+  notes: 'High IV, volatile. Weekly options good. Brokerage play.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.10
+}, {
+  ticker: 'NVDA',
+  sector: 'Semiconductors',
+  notes: 'AI leader. Large cap = lower IV but reliable.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.07
+}, {
+  ticker: 'AMD',
+  sector: 'Semiconductors',
+  notes: 'NVDA alternative, higher IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.09
+}, {
+  ticker: 'SOFI',
+  sector: 'Fintech',
+  notes: 'Low price, sell high contract counts. Moderate IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.11
+}, {
+  ticker: 'IREN',
+  sector: 'Bitcoin Mining',
+  notes: 'Very high IV. High risk/reward. Watch BTC correlation.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.16
+}, {
+  ticker: 'CRWV',
+  sector: 'AI/Cloud',
+  notes: 'High IV, volatile. Can move against quickly.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.13
+}, {
+  ticker: 'TTD',
+  sector: 'AdTech',
+  notes: 'Lower price, high IV periods.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.11
+}, {
+  ticker: 'META',
+  sector: 'Social Media',
+  notes: 'High quality, moderate IV. Safe.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.07
+}, {
+  ticker: 'AVGO',
+  sector: 'Semiconductors',
+  notes: 'Broadcom. Reliable, moderate IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.08
+}, {
+  ticker: 'PLTR',
+  sector: 'AI/Data',
+  notes: 'High growth, elevated IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.10
+}, {
+  ticker: 'NBIS',
+  sector: 'AI Infrastructure',
+  notes: 'Nebius. Speculative, very high IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.14
+}, {
+  ticker: 'TSM',
+  sector: 'Semiconductors',
+  notes: 'TSMC. Best in class foundry.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.07
+}, {
+  ticker: 'MU',
+  sector: 'Semiconductors',
+  notes: 'Micron. Cyclical, moderate-high IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.08
+}, {
+  ticker: 'UNH',
+  sector: 'Healthcare',
+  notes: 'Defensive. Lower IV, good for stability.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.06
+}, {
+  ticker: 'ORCL',
+  sector: 'Enterprise Software',
+  notes: 'Cloud growth. Watch earnings.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.08
+}, {
+  ticker: 'NET',
+  sector: 'Cloud/Security',
+  notes: 'Cloudflare. Growth stock, elevated IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.10
+}, {
+  ticker: 'TWLO',
+  sector: 'Cloud Comms',
+  notes: 'Twilio.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.11
+}, {
+  ticker: 'AMAT',
+  sector: 'Semiconductors',
+  notes: 'Applied Materials. Capex cycle play.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.09
+}, {
+  ticker: 'RBLX',
+  sector: 'Gaming/Metaverse',
+  notes: 'High IV, speculative.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.12
+}, {
+  ticker: 'TEM',
+  sector: 'AI/Biotech',
+  notes: 'Tempus AI. Very high IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.14
+}, {
+  ticker: 'QQQ',
+  sector: 'ETF',
+  notes: 'Nasdaq ETF. Hedge / lower IV.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.04
+}, {
+  ticker: 'MP',
+  sector: 'Rare Earth',
+  notes: 'MP Materials.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.12
+}, {
+  ticker: 'MRVL',
+  sector: 'Semiconductors',
+  notes: 'Marvell Technology.',
+  gs_target: null,
+  gs_rating: '',
+  iv_rank: null,
+  sweet_strike_pct: 0.09
+}];
+const SEED_CAPITAL = {
+  ANE: {
+    capital_gbp: 300000,
+    margin_multiplier: 3,
+    buffer_pct: 0.32,
+    label: 'Aspire North East Ltd',
+    usd_cash: 30400,
+    deposits: [{
+      id: 1,
+      date: '2026-02-10',
+      amount_gbp: 10000,
+      note: 'Initial deposit'
+    }, {
+      id: 2,
+      date: '2026-02-17',
+      amount_gbp: 40000,
+      note: 'Top-up'
+    }, {
+      id: 3,
+      date: '2026-03-02',
+      amount_gbp: 50000,
+      note: 'Top-up'
+    }, {
+      id: 4,
+      date: '2026-03-09',
+      amount_gbp: 100000,
+      note: 'Top-up'
+    }, {
+      id: 5,
+      date: '2026-04-02',
+      amount_gbp: 100000,
+      note: 'Top-up'
+    }]
+  }
+};
+const ENTITIES = ['ANE'];
+const STATUSES = ['Open', 'Closed', 'Expired', 'Assigned'];
+// FX is now passed as a prop -- default 1.34, editable in Capital tab
+const DEFAULT_FX = 1.34;
+
+// --- Helpers -----------------------------------------------------------------
+const fmt$ = (v, dp = 0) => v == null ? '--' : '$' + Number(v).toLocaleString('en-US', {
+  minimumFractionDigits: dp,
+  maximumFractionDigits: dp
+});
+const makeFmtGBP = fx => (v, dp = 0) => v == null ? '--' : '£' + Number(v / fx).toLocaleString('en-GB', {
+  minimumFractionDigits: dp,
+  maximumFractionDigits: dp
+});
+// legacy alias used inside components that receive fx as prop
+const fmtGBP = (v, fx, dp = 0) => v == null ? '--' : '£' + Number(v / fx).toLocaleString('en-GB', {
+  minimumFractionDigits: dp,
+  maximumFractionDigits: dp
+});
+const fmtPct = (v, dp = 1) => v == null ? '--' : (v * 100).toFixed(dp) + '%';
+const fmtNum = (v, dp = 2) => v == null ? '--' : Number(v).toFixed(dp);
+const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / (1000 * 86400));
+const annualiseROC = (income, capital, dte) => dte > 0 ? income / capital * (365 / dte) * 100 : 0;
+const premPer1k = (credit, capital) => capital > 0 ? credit / capital * 1000 : 0;
+const toWeekKey = d => {
+  const dt = new Date(d),
+    mon = new Date(dt);
+  mon.setDate(dt.getDate() - dt.getDay() + 1);
+  return mon.toISOString().slice(0, 10);
+};
+const fmtDate = d => {
+  if (!d) return '--';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit'
+  });
+};
+const now = new Date().toISOString().slice(0, 10);
+function tradeMetrics(t) {
+  const dte = daysBetween(t.date_entry, t.date_expiry);
+  const roc = t.income != null && t.capital ? annualiseROC(t.income, t.capital, dte) : null;
+  const pp1k = premPer1k(t.total_credit, t.capital);
+  return {
+    dte,
+    roc,
+    pp1k
+  };
+}
+
+// --- Components --------------------------------------------------------------
+
+function Badge({
+  v
+}) {
+  if (v === 'W') return /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-win"
+  }, "WIN");
+  if (v === 'L') return /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-loss"
+  }, "LOSS");
+  if (v === 'Open') return /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-open"
+  }, "OPEN");
+  if (v === 'Closed') return /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-closed"
+  }, "CLOSED");
+  if (v === 'Expired') return /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-exp"
+  }, "EXPIRED");
+  if (v === 'Assigned') return /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-loss"
+  }, "ASSIGNED");
+  return /*#__PURE__*/React.createElement("span", {
+    className: "badge",
+    style: {
+      background: '#1e293b',
+      color: '#64748b'
+    }
+  }, v || '--');
+}
+function EntityBadge({
+  v
+}) {
+  const cls = `badge entity-${v}`;
+  return /*#__PURE__*/React.createElement("span", {
+    className: cls
+  }, v);
+}
+function MetricCard({
+  label,
+  value,
+  sub,
+  color = '#60a5fa',
+  icon
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "metric-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      marginBottom: 6,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 26,
+      fontWeight: 700,
+      color,
+      fontFamily: "'JetBrains Mono',monospace"
+    }
+  }, value), sub && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#64748b',
+      marginTop: 4
+    }
+  }, sub));
+}
+
+// --- Trade Modal -------------------------------------------------------------
+function TradeModal({
+  trade,
+  onSave,
+  onClose,
+  stocks,
+  fx
+}) {
+  const isNew = !(trade !== null && trade !== void 0 && trade.id);
+  const blank = {
+    entity: 'ANE',
+    date_entry: now,
+    date_expiry: '',
+    ticker: '',
+    contracts: 1,
+    price_entry: '',
+    strike: '',
+    capital_gbp: '',
+    capital: '',
+    credit_pc: '',
+    total_credit: '',
+    probability: '',
+    iv: '',
+    status: 'Open',
+    result: '',
+    income: '',
+    income_gbp: '',
+    comment: ''
+  };
+
+  // When editing existing trade, pre-fill GBP fields from stored USD values
+  const initForm = () => {
+    if (!trade) return blank;
+    return {
+      ...blank,
+      ...trade,
+      capital_gbp: trade.capital ? (trade.capital / fx).toFixed(0) : '',
+      income_gbp: trade.income ? (trade.income / fx).toFixed(2) : ''
+    };
+  };
+  const [f, setF] = useState(initForm);
+  const [capMode, setCapMode] = useState('gbp'); // 'gbp' | 'usd' -- which input user is driving from
+
+  const set = (k, v) => setF(p => ({
+    ...p,
+    [k]: v
+  }));
+
+  // When £ capital changes → update $ capital
+  const onCapGBP = v => {
+    setCapMode('gbp');
+    set('capital_gbp', v);
+    const usd = parseFloat(v) * fx;
+    if (!isNaN(usd)) set('capital', usd.toFixed(0));
+  };
+  // When $ capital changes → update £ capital
+  const onCapUSD = v => {
+    setCapMode('usd');
+    set('capital', v);
+    const gbp = parseFloat(v) / fx;
+    if (!isNaN(gbp)) set('capital_gbp', gbp.toFixed(0));
+  };
+
+  // When £ income changes → update $ income
+  const onIncomeGBP = v => {
+    set('income_gbp', v);
+    const usd = parseFloat(v) * fx;
+    if (!isNaN(usd)) set('income', usd.toFixed(2));
+  };
+  // When $ income changes → update £ income
+  const onIncomeUSD = v => {
+    set('income', v);
+    const gbp = parseFloat(v) / fx;
+    if (!isNaN(gbp)) set('income_gbp', gbp.toFixed(2));
+  };
+
+  // Auto-calc capital from strike x contracts (only if user hasn't typed a capital override)
+  useEffect(() => {
+    if (f.strike && f.contracts && capMode === 'gbp' && !f.capital_gbp) {
+      const capUSD = parseFloat(f.strike) * parseInt(f.contracts) * 100;
+      if (!isNaN(capUSD)) {
+        set('capital', capUSD.toFixed(0));
+        set('capital_gbp', (capUSD / fx).toFixed(0));
+      }
+    }
+  }, [f.strike, f.contracts]);
+
+  // Auto-calc total credit
+  useEffect(() => {
+    if (f.credit_pc && f.contracts) {
+      const tot = parseFloat(f.credit_pc) * parseInt(f.contracts) * 100;
+      if (!isNaN(tot)) set('total_credit', tot.toFixed(2));
+    }
+  }, [f.credit_pc, f.contracts]);
+  const save = () => {
+    if (!f.ticker || !f.strike || !f.date_entry || !f.date_expiry) return alert('Fill required fields: Ticker, Strike, Entry Date, Expiry Date');
+    const income = parseFloat(f.income) || 0;
+    onSave({
+      ...f,
+      strike: parseFloat(f.strike),
+      contracts: parseInt(f.contracts) || 1,
+      capital: parseFloat(f.capital) || parseFloat(f.strike) * 100,
+      credit_pc: parseFloat(f.credit_pc) || 0,
+      total_credit: parseFloat(f.total_credit) || 0,
+      probability: f.probability ? parseFloat(f.probability) : null,
+      iv: f.iv ? parseFloat(f.iv) : null,
+      price_entry: f.price_entry ? parseFloat(f.price_entry) : null,
+      income,
+      id: f.id || Date.now()
+    });
+  };
+  const knownTickers = stocks.map(s => s.ticker).sort();
+  const capUSDDisplay = f.capital ? parseFloat(f.capital) : null;
+  const incomeUSDDisplay = f.income ? parseFloat(f.income) : null;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "overlay",
+    onClick: e => e.target === e.currentTarget && onClose()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "modal"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4
+    }
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: {
+      fontSize: 16,
+      fontWeight: 600
+    }
+  }, isNew ? 'Add Trade' : 'Edit Trade'), /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    onClick: onClose
+  }, "\u2715 Close")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginBottom: 16
+    }
+  }, "FX rate: \xA31 = $", fx.toFixed(4), " -- enter capital/income in \xA3 and $ updates automatically, or vice versa"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Ticker *"), /*#__PURE__*/React.createElement("input", {
+    list: "tickers",
+    value: f.ticker,
+    onChange: e => set('ticker', e.target.value.toUpperCase()),
+    placeholder: "NVDA"
+  }), /*#__PURE__*/React.createElement("datalist", {
+    id: "tickers"
+  }, knownTickers.map(t => /*#__PURE__*/React.createElement("option", {
+    key: t,
+    value: t
+  })))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Contracts *"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.contracts,
+    onChange: e => set('contracts', e.target.value),
+    min: "1"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Strike Price *"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.strike,
+    onChange: e => set('strike', e.target.value),
+    step: "0.5"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Entry Date *"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: f.date_entry,
+    onChange: e => set('date_entry', e.target.value)
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Expiry Date *"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: f.date_expiry,
+    onChange: e => set('date_expiry', e.target.value)
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Stock Price at Entry ($)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.price_entry,
+    onChange: e => set('price_entry', e.target.value),
+    step: "0.01"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      gridColumn: '1/-1',
+      background: '#0a1628',
+      border: '1px solid #1e3a5f',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#3b82f6',
+      fontWeight: 600,
+      marginBottom: 10,
+      letterSpacing: '0.04em'
+    }
+  }, "CAPITAL ALLOCATED"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr',
+      gap: 10,
+      alignItems: 'end'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Enter in \xA3 (GBP)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.capital_gbp,
+    onChange: e => onCapGBP(e.target.value),
+    placeholder: "e.g. 50000",
+    style: {
+      borderColor: capMode === 'gbp' ? '#3b82f6' : '#334155'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#334155',
+      paddingBottom: 8,
+      fontSize: 18
+    }
+  }, "\u21C4"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "= in $ (USD) ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#3b82f6'
+    }
+  }, "auto-converted")), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.capital,
+    onChange: e => onCapUSD(e.target.value),
+    placeholder: "auto",
+    style: {
+      borderColor: capMode === 'usd' ? '#3b82f6' : '#334155'
+    }
+  }))), capUSDDisplay && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, "\xA3", (capUSDDisplay / fx).toLocaleString('en-GB', {
+    maximumFractionDigits: 0
+  }), " \u2192 $", capUSDDisplay.toLocaleString('en-US', {
+    maximumFractionDigits: 0
+  }), " at rate 1.", (fx * 100 - 100).toFixed(0).replace('-', ''))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Credit per Contract ($)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.credit_pc,
+    onChange: e => set('credit_pc', e.target.value),
+    step: "0.01"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Total Credit ($) ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#475569',
+      fontWeight: 400
+    }
+  }, "auto")), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.total_credit,
+    onChange: e => set('total_credit', e.target.value)
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Probability OTM"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.probability,
+    onChange: e => set('probability', e.target.value),
+    step: "0.01",
+    placeholder: "0.92"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "IV"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.iv,
+    onChange: e => set('iv', e.target.value),
+    step: "0.001"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Status"), /*#__PURE__*/React.createElement("select", {
+    value: f.status,
+    onChange: e => set('status', e.target.value)
+  }, STATUSES.map(s => /*#__PURE__*/React.createElement("option", {
+    key: s
+  }, s)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "W / L"), /*#__PURE__*/React.createElement("select", {
+    value: f.result || '',
+    onChange: e => set('result', e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "--"), /*#__PURE__*/React.createElement("option", null, "W"), /*#__PURE__*/React.createElement("option", null, "L"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      gridColumn: '1/-1',
+      background: '#0a1a12',
+      border: '1px solid #14532d',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#22c55e',
+      fontWeight: 600,
+      marginBottom: 10,
+      letterSpacing: '0.04em'
+    }
+  }, "INCOME REALISED"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr',
+      gap: 10,
+      alignItems: 'end'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Enter in \xA3 (GBP)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.income_gbp,
+    onChange: e => onIncomeGBP(e.target.value),
+    step: "0.01",
+    placeholder: "e.g. 500"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#334155',
+      paddingBottom: 8,
+      fontSize: 18
+    }
+  }, "\u21C4"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "= in $ (USD) ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#22c55e'
+    }
+  }, "auto-converted")), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: f.income,
+    onChange: e => onIncomeUSD(e.target.value),
+    step: "0.01",
+    placeholder: "auto"
+  }))), incomeUSDDisplay != null && incomeUSDDisplay !== 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, "Income stored as $", incomeUSDDisplay.toFixed(2), " \xB7 \xA3", (incomeUSDDisplay / fx).toFixed(2))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      gridColumn: '1/-1'
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Comment"), /*#__PURE__*/React.createElement("input", {
+    value: f.comment,
+    onChange: e => set('comment', e.target.value),
+    placeholder: "Notes..."
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      marginTop: 20,
+      justifyContent: 'flex-end'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    onClick: onClose
+  }, "Cancel"), /*#__PURE__*/React.createElement("button", {
+    className: "btn-primary",
+    onClick: save
+  }, isNew ? 'Add Trade' : 'Save Changes'))));
+}
+
+// --- Dashboard ---------------------------------------------------------------
+function Dashboard({
+  trades,
+  capital,
+  fx
+}) {
+  const chartRef = useRef(null);
+  const winChartRef = useRef(null);
+  const weeklyChartRef = useRef(null);
+  const closed = trades.filter(t => t.status === 'Closed' || t.status === 'Expired');
+  const open = trades.filter(t => t.status === 'Open');
+  const totalIncome = closed.reduce((s, t) => s + (t.income || 0), 0);
+  const wins = closed.filter(t => t.result === 'W');
+  const losses = closed.filter(t => t.result === 'L');
+  const winRate = closed.length ? wins.length / closed.length : 0;
+  const totalCapitalDeployed = open.reduce((s, t) => s + (t.capital || 0), 0);
+  const avgROC = closed.filter(t => t.income > 0 && t.capital).map(t => {
+    const dte = daysBetween(t.date_entry, t.date_expiry);
+    return annualiseROC(t.income, t.capital, dte);
+  });
+  const meanROC = avgROC.length ? avgROC.reduce((s, v) => s + v, 0) / avgROC.length : 0;
+
+  // Weekly income for chart
+  const weeklyMap = {};
+  closed.forEach(t => {
+    const wk = toWeekKey(t.date_expiry);
+    weeklyMap[wk] = (weeklyMap[wk] || 0) + (t.income || 0);
+  });
+  const weeks = Object.keys(weeklyMap).sort();
+  const weekLabels = weeks.map(w => {
+    const d = new Date(w);
+    return d.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short'
+    });
+  });
+  const weekData = weeks.map(w => weeklyMap[w]);
+
+  // Cumulative P&L
+  let cum = 0;
+  const cumData = weeks.map(w => {
+    cum += weeklyMap[w];
+    return cum;
+  });
+  useEffect(() => {
+    if (!weeklyChartRef.current) return;
+    const ctx = weeklyChartRef.current.getContext('2d');
+    const ch = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: weekLabels,
+        datasets: [{
+          label: 'Weekly Income ($)',
+          data: weekData,
+          backgroundColor: weekData.map(v => v >= 0 ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.6)'),
+          borderColor: weekData.map(v => v >= 0 ? '#22c55e' : '#ef4444'),
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'y'
+        }, {
+          label: 'Cumulative ($)',
+          data: cumData,
+          type: 'line',
+          borderColor: '#60a5fa',
+          backgroundColor: 'rgba(96,165,250,0.1)',
+          fill: true,
+          tension: 0.3,
+          yAxisID: 'y1',
+          pointRadius: 3,
+          pointBackgroundColor: '#60a5fa'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: '#94a3b8',
+              font: {
+                size: 11
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#e2e8f0',
+            bodyColor: '#94a3b8'
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#64748b',
+              font: {
+                size: 10
+              }
+            },
+            grid: {
+              color: '#1e293b'
+            }
+          },
+          y: {
+            ticks: {
+              color: '#64748b',
+              font: {
+                size: 10
+              },
+              callback: v => '$' + v.toLocaleString()
+            },
+            grid: {
+              color: '#1e293b'
+            },
+            position: 'left'
+          },
+          y1: {
+            ticks: {
+              color: '#64748b',
+              font: {
+                size: 10
+              },
+              callback: v => '$' + v.toLocaleString()
+            },
+            grid: {
+              display: false
+            },
+            position: 'right'
+          }
+        }
+      }
+    });
+    return () => ch.destroy();
+  }, [trades]);
+  useEffect(() => {
+    if (!winChartRef.current) return;
+    const ctx = winChartRef.current.getContext('2d');
+    const ch = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Wins', 'Losses'],
+        datasets: [{
+          data: [wins.length, losses.length],
+          backgroundColor: ['rgba(34,197,94,0.7)', 'rgba(239,68,68,0.7)'],
+          borderColor: ['#22c55e', '#ef4444'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: {
+            labels: {
+              color: '#94a3b8',
+              font: {
+                size: 11
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#e2e8f0',
+            bodyColor: '#94a3b8'
+          }
+        }
+      }
+    });
+    return () => ch.destroy();
+  }, [trades]);
+
+  // Entity breakdown
+  const entityBreakdown = {};
+  ENTITIES.forEach(e => {
+    const et = closed.filter(t => t.entity === e);
+    entityBreakdown[e] = {
+      income: et.reduce((s, t) => s + (t.income || 0), 0),
+      trades: et.length,
+      wins: et.filter(t => t.result === 'W').length
+    };
+  });
+
+  // Top tickers
+  const tickerMap = {};
+  closed.forEach(t => {
+    if (!tickerMap[t.ticker]) tickerMap[t.ticker] = {
+      income: 0,
+      trades: 0,
+      wins: 0
+    };
+    tickerMap[t.ticker].income += t.income || 0;
+    tickerMap[t.ticker].trades++;
+    if (t.result === 'W') tickerMap[t.ticker].wins++;
+  });
+  const topTickers = Object.entries(tickerMap).sort((a, b) => b[1].income - a[1].income).slice(0, 5);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 24
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      gap: 16,
+      marginBottom: 24
+    }
+  }, /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Total Income (YTD)",
+    value: fmt$(totalIncome),
+    sub: fmtGBP(totalIncome, fx) + ' GBP',
+    color: "#4ade80"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Win Rate",
+    value: (winRate * 100).toFixed(0) + '%',
+    sub: `${wins.length}W / ${losses.length}L from ${closed.length} trades`,
+    color: winRate > 0.85 ? '#4ade80' : winRate > 0.70 ? '#fbbf24' : '#f87171'
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Capital Deployed",
+    value: fmt$(totalCapitalDeployed),
+    sub: `${open.length} open positions`,
+    color: "#60a5fa"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Avg Annualised ROC",
+    value: meanROC.toFixed(1) + '%',
+    sub: "On closed trades",
+    color: "#c084fc"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '2fr 1fr',
+      gap: 16,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Weekly Income & Cumulative P&L"), /*#__PURE__*/React.createElement("div", {
+    className: "chart-container-lg"
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: weeklyChartRef
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Win / Loss Distribution"), /*#__PURE__*/React.createElement("div", {
+    className: "chart-container-lg",
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 180,
+      width: '100%'
+    }
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: winChartRef
+  }))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Entity Performance"), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Entity"), /*#__PURE__*/React.createElement("th", null, "Income"), /*#__PURE__*/React.createElement("th", null, "GBP"), /*#__PURE__*/React.createElement("th", null, "Trades"), /*#__PURE__*/React.createElement("th", null, "Win%"))), /*#__PURE__*/React.createElement("tbody", null, ENTITIES.filter(e => {
+    var _entityBreakdown$e;
+    return ((_entityBreakdown$e = entityBreakdown[e]) === null || _entityBreakdown$e === void 0 ? void 0 : _entityBreakdown$e.trades) > 0;
+  }).map(e => {
+    const d = entityBreakdown[e];
+    return /*#__PURE__*/React.createElement("tr", {
+      key: e
+    }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(EntityBadge, {
+      v: e
+    })), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#4ade80'
+      }
+    }, fmt$(d.income)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#a3e635'
+      }
+    }, fmtGBP(d.income, fx)), /*#__PURE__*/React.createElement("td", null, d.trades), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: d.wins / d.trades > 0.85 ? '#4ade80' : '#fbbf24'
+      }
+    }, d.trades ? (d.wins / d.trades * 100).toFixed(0) + '%' : '--'));
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Top Tickers by Income"), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Ticker"), /*#__PURE__*/React.createElement("th", null, "Income"), /*#__PURE__*/React.createElement("th", null, "Trades"), /*#__PURE__*/React.createElement("th", null, "Win%"))), /*#__PURE__*/React.createElement("tbody", null, topTickers.map(([t, d]) => /*#__PURE__*/React.createElement("tr", {
+    key: t
+  }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+    className: "ticker-chip"
+  }, t)), /*#__PURE__*/React.createElement("td", {
+    style: {
+      color: d.income >= 0 ? '#4ade80' : '#f87171'
+    }
+  }, fmt$(d.income)), /*#__PURE__*/React.createElement("td", null, d.trades), /*#__PURE__*/React.createElement("td", null, (d.wins / d.trades * 100).toFixed(0) + '%'))))))), open.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      marginTop: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Open Positions"), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Entity"), /*#__PURE__*/React.createElement("th", null, "Ticker"), /*#__PURE__*/React.createElement("th", null, "Contracts"), /*#__PURE__*/React.createElement("th", null, "Strike"), /*#__PURE__*/React.createElement("th", null, "Capital"), /*#__PURE__*/React.createElement("th", null, "Total Credit"), /*#__PURE__*/React.createElement("th", null, "Expiry"), /*#__PURE__*/React.createElement("th", null, "DTE"), /*#__PURE__*/React.createElement("th", null, "Prem/\xA31k"))), /*#__PURE__*/React.createElement("tbody", null, open.map(t => {
+    const dte = daysBetween(now, t.date_expiry);
+    const pp1k = premPer1k(t.total_credit, t.capital);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: t.id
+    }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(EntityBadge, {
+      v: t.entity
+    })), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "ticker-chip"
+    }, t.ticker)), /*#__PURE__*/React.createElement("td", null, t.contracts), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, fmt$(t.strike, 2)), /*#__PURE__*/React.createElement("td", null, fmt$(t.capital)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#4ade80'
+      }
+    }, fmt$(t.total_credit)), /*#__PURE__*/React.createElement("td", null, fmtDate(t.date_expiry)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: dte <= 1 ? '#f87171' : dte <= 3 ? '#fbbf24' : '#94a3b8'
+      }
+    }, dte, "d"), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, pp1k.toFixed(2)));
+  })))));
+}
+
+// --- Trade Log ---------------------------------------------------------------
+function TradeLog({
+  trades,
+  setTrades,
+  stocks,
+  fx
+}) {
+  const [filter, setFilter] = useState({
+    entity: '',
+    ticker: '',
+    status: '',
+    result: ''
+  });
+  const [modal, setModal] = useState(null); // null | 'new' | trade-object
+  const [sort, setSort] = useState({
+    col: 'date_entry',
+    dir: -1
+  });
+  const filtered = trades.filter(t => (!filter.entity || t.entity === filter.entity) && (!filter.ticker || t.ticker.includes(filter.ticker.toUpperCase())) && (!filter.status || t.status === filter.status) && (!filter.result || t.result === filter.result)).sort((a, b) => {
+    let va = a[sort.col],
+      vb = b[sort.col];
+    if (typeof va === 'string') return sort.dir * va.localeCompare(vb || '');
+    return sort.dir * ((va || 0) - (vb || 0));
+  });
+  const toggleSort = col => {
+    setSort(s => ({
+      col,
+      dir: s.col === col ? -s.dir : 1
+    }));
+  };
+  const SH = ({
+    col,
+    label
+  }) => /*#__PURE__*/React.createElement("th", {
+    onClick: () => toggleSort(col),
+    style: {
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    }
+  }, label, sort.col === col ? sort.dir === 1 ? '↑' : '↓' : '');
+  const save = t => {
+    setTrades(prev => prev.find(x => x.id === t.id) ? prev.map(x => x.id === t.id ? t : x) : [...prev, t]);
+    setModal(null);
+  };
+  const del = id => {
+    if (confirm('Delete this trade?')) setTrades(p => p.filter(x => x.id !== id));
+  };
+  const exportCSV = () => {
+    const cols = ['entity', 'date_entry', 'date_expiry', 'ticker', 'contracts', 'strike', 'capital', 'credit_pc', 'total_credit', 'probability', 'iv', 'status', 'result', 'income', 'comment'];
+    const rows = [cols.join(','), ...filtered.map(t => cols.map(c => {
+      const v = t[c];
+      return typeof v === 'string' && v.includes(',') ? `"${v}"` : v ?? '';
+    }).join(','))];
+    const b = new Blob([rows.join('\n')], {
+      type: 'text/csv'
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'trades.csv';
+    a.click();
+  };
+  const totalIncome = filtered.reduce((s, t) => s + (t.income || 0), 0);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 24
+    }
+  }, modal && /*#__PURE__*/React.createElement(TradeModal, {
+    trade: modal === 'new' ? null : modal,
+    onSave: save,
+    onClose: () => setModal(null),
+    stocks: stocks,
+    fx: fx
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      marginBottom: 16,
+      alignItems: 'center',
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: filter.ticker,
+    onChange: e => setFilter(p => ({
+      ...p,
+      ticker: e.target.value
+    })),
+    placeholder: "Filter ticker\u2026",
+    style: {
+      width: 140
+    }
+  }), /*#__PURE__*/React.createElement("select", {
+    value: filter.status,
+    onChange: e => setFilter(p => ({
+      ...p,
+      status: e.target.value
+    })),
+    style: {
+      width: 120
+    }
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "All Status"), STATUSES.map(s => /*#__PURE__*/React.createElement("option", {
+    key: s
+  }, s))), /*#__PURE__*/React.createElement("select", {
+    value: filter.result,
+    onChange: e => setFilter(p => ({
+      ...p,
+      result: e.target.value
+    })),
+    style: {
+      width: 100
+    }
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "W/L"), /*#__PURE__*/React.createElement("option", null, "W"), /*#__PURE__*/React.createElement("option", null, "L")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginLeft: 'auto',
+      display: 'flex',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    onClick: exportCSV
+  }, "\u2193 Export CSV"), /*#__PURE__*/React.createElement("button", {
+    className: "btn-primary",
+    onClick: () => setModal('new')
+  }, "+ Add Trade"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#64748b',
+      marginBottom: 10
+    }
+  }, filtered.length, " trades \xB7 Income: ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: totalIncome >= 0 ? '#4ade80' : '#f87171'
+    }
+  }, fmt$(totalIncome)), " / ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#a3e635'
+    }
+  }, fmtGBP(totalIncome, fx))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(SH, {
+    col: "entity",
+    label: "Entity"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "date_entry",
+    label: "Entry"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "date_expiry",
+    label: "Expiry"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "ticker",
+    label: "Ticker"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "contracts",
+    label: "Cnts"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "strike",
+    label: "Strike"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "capital",
+    label: "Capital"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "total_credit",
+    label: "Credit"
+  }), /*#__PURE__*/React.createElement("th", null, "Prem/\xA31k"), /*#__PURE__*/React.createElement(SH, {
+    col: "probability",
+    label: "Prob%"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "iv",
+    label: "IV"
+  }), /*#__PURE__*/React.createElement("th", null, "DTE"), /*#__PURE__*/React.createElement("th", null, "Ann.ROC"), /*#__PURE__*/React.createElement(SH, {
+    col: "status",
+    label: "Status"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "result",
+    label: "W/L"
+  }), /*#__PURE__*/React.createElement(SH, {
+    col: "income",
+    label: "Income"
+  }), /*#__PURE__*/React.createElement("th", null, "Comment"), /*#__PURE__*/React.createElement("th", null))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(t => {
+    const {
+      dte,
+      roc,
+      pp1k
+    } = tradeMetrics(t);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: t.id
+    }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(EntityBadge, {
+      v: t.entity
+    })), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontSize: 12
+      }
+    }, fmtDate(t.date_entry)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontSize: 12
+      }
+    }, fmtDate(t.date_expiry)), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "ticker-chip"
+    }, t.ticker)), /*#__PURE__*/React.createElement("td", null, t.contracts), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, "$", t.strike), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontSize: 12
+      }
+    }, fmt$(t.capital)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: '#60a5fa'
+      }
+    }, fmt$(t.total_credit)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: pp1k >= 6 ? '#4ade80' : pp1k >= 4 ? '#fbbf24' : '#f87171'
+      }
+    }, pp1k.toFixed(2)), /*#__PURE__*/React.createElement("td", null, t.probability != null ? fmtPct(t.probability) : '--'), /*#__PURE__*/React.createElement("td", null, t.iv != null ? t.iv.toFixed(3) : '--'), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#64748b'
+      }
+    }, dte, "d"), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: roc > 50 ? '#4ade80' : roc > 20 ? '#a3e635' : roc > 0 ? '#fbbf24' : '#f87171'
+      }
+    }, roc != null ? roc.toFixed(0) + '%' : '--'), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(Badge, {
+      v: t.status
+    })), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(Badge, {
+      v: t.result
+    })), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: t.income > 0 ? '#4ade80' : t.income < 0 ? '#f87171' : '#94a3b8'
+      },
+      className: "mono"
+    }, fmt$(t.income)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#475569',
+        maxWidth: 120,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, t.comment), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 4
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "btn-ghost",
+      style: {
+        padding: '3px 8px',
+        fontSize: 11
+      },
+      onClick: () => setModal(t)
+    }, "Edit"), /*#__PURE__*/React.createElement("button", {
+      className: "btn-danger",
+      style: {
+        padding: '3px 8px',
+        fontSize: 11
+      },
+      onClick: () => del(t.id)
+    }, "\u2715"))));
+  })))));
+}
+
+// --- Sweet Spot Calculator ----------------------------------------------------
+function SweetSpot({
+  trades
+}) {
+  const [s, setS] = useState('');
+  const [price, setPrice] = useState('');
+  const [iv, setIV] = useState('');
+  const [dte, setDTE] = useState(7);
+  const [minPP1k, setMinPP1k] = useState(4);
+  const [target_prob, setTargetProb] = useState(0.90);
+  const [rows, setRows] = useState([]);
+  const historicalForTicker = trades.filter(t => t.ticker === s.toUpperCase() && t.status === 'Closed');
+  const calc = () => {
+    const S = parseFloat(price),
+      sigma = parseFloat(iv),
+      T = dte / 365,
+      r = 0.05;
+    if (!S || !sigma || !dte) return;
+    const results = [];
+    for (let pct = 0.02; pct <= 0.30; pct += 0.01) {
+      const K = Math.round(S * (1 - pct) * 2) / 2; // round to nearest 0.50
+      const {
+        price: optPrice,
+        probOTM
+      } = bsPut(S, K, T, sigma, r);
+      const cap = K * 100;
+      const pp1k = premPer1k(optPrice * 100, cap);
+      const annRoc = annualiseROC(optPrice * 100, cap, dte);
+      results.push({
+        pct,
+        K,
+        optPrice,
+        cap,
+        pp1k,
+        probOTM,
+        annRoc,
+        contracts: Math.floor(100000 / cap) || 1
+      });
+    }
+    setRows(results);
+  };
+  const sweet = rows.filter(r => r.pp1k >= minPP1k && r.probOTM >= target_prob);
+  const best = sweet.reduce((b, r) => !b || r.pp1k > b.pp1k ? r : b, null);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 24
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 16,
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Sweet Spot Calculator"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gap: 12,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Ticker"), /*#__PURE__*/React.createElement("input", {
+    value: s,
+    onChange: e => setS(e.target.value.toUpperCase()),
+    placeholder: "NVDA"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Current Price ($)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: price,
+    onChange: e => setPrice(e.target.value),
+    step: "0.5"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Implied Volatility"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: iv,
+    onChange: e => setIV(e.target.value),
+    step: "0.01",
+    placeholder: "0.60"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "DTE (days)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: dte,
+    onChange: e => setDTE(parseInt(e.target.value) || 7),
+    min: "1",
+    max: "60"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Min Prem/\xA31k"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: minPP1k,
+    onChange: e => setMinPP1k(parseFloat(e.target.value) || 4),
+    step: "0.5"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Min Prob OTM"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: target_prob,
+    onChange: e => setTargetProb(parseFloat(e.target.value) || 0.90),
+    step: "0.01",
+    placeholder: "0.90"
+  }))), /*#__PURE__*/React.createElement("button", {
+    className: "btn-primary",
+    onClick: calc
+  }, "Calculate Sweet Spots \u2192"), best && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      padding: 14,
+      borderRadius: 8,
+      background: '#052e16',
+      border: '1px solid #166534'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#4ade80',
+      fontWeight: 600,
+      marginBottom: 6
+    }
+  }, "\uD83C\uDFAF Optimal Strike: $", best.K), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 8,
+      fontSize: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#64748b'
+    }
+  }, "Premium: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#e2e8f0',
+      fontFamily: 'monospace'
+    }
+  }, "$", (best.optPrice * 100).toFixed(2), "/contract")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#64748b'
+    }
+  }, "Prem/\xA31k: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#4ade80',
+      fontFamily: 'monospace'
+    }
+  }, best.pp1k.toFixed(2))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#64748b'
+    }
+  }, "Prob OTM: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#e2e8f0',
+      fontFamily: 'monospace'
+    }
+  }, (best.probOTM * 100).toFixed(1), "%")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#64748b'
+    }
+  }, "Ann. ROC: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#4ade80',
+      fontFamily: 'monospace'
+    }
+  }, best.annRoc.toFixed(0), "%")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#64748b'
+    }
+  }, "OTM by: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#e2e8f0',
+      fontFamily: 'monospace'
+    }
+  }, (best.pct * 100).toFixed(1), "%")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#64748b'
+    }
+  }, "Capital/contract: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#e2e8f0',
+      fontFamily: 'monospace'
+    }
+  }, "$", best.cap.toLocaleString()))))), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Historical: ", s || '--'), historicalForTicker.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 13,
+      paddingTop: 8
+    }
+  }, "No closed trade history for this ticker yet.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 12,
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b'
+    }
+  }, "Avg Prem/\xA31k"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      color: '#60a5fa',
+      marginTop: 4
+    }
+  }, (historicalForTicker.reduce((s, t) => s + premPer1k(t.total_credit, t.capital), 0) / historicalForTicker.length).toFixed(2))), /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b'
+    }
+  }, "Win Rate"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      color: '#4ade80',
+      marginTop: 4
+    }
+  }, (historicalForTicker.filter(t => t.result === 'W').length / historicalForTicker.length * 100).toFixed(0), "%")), /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b'
+    }
+  }, "Total Income"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      color: '#4ade80',
+      marginTop: 4
+    }
+  }, fmt$(historicalForTicker.reduce((s, t) => s + (t.income || 0), 0)))), /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b'
+    }
+  }, "Trades"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      color: '#e2e8f0',
+      marginTop: 4
+    }
+  }, historicalForTicker.length))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginBottom: 6
+    }
+  }, "Past strikes used:"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 6
+    }
+  }, [...new Set(historicalForTicker.map(t => t.strike))].sort((a, b) => a - b).map(k => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    style: {
+      background: '#1e293b',
+      color: '#93c5fd',
+      borderRadius: 4,
+      padding: '3px 10px',
+      fontSize: 12,
+      fontFamily: 'monospace'
+    }
+  }, "$", k)))))), rows.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Strike Analysis -- ", s || 'Ticker', " @ $", price, " | IV ", iv, " | ", dte, "DTE"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Strike"), /*#__PURE__*/React.createElement("th", null, "% OTM"), /*#__PURE__*/React.createElement("th", null, "Option Price"), /*#__PURE__*/React.createElement("th", null, "Prem/Contract"), /*#__PURE__*/React.createElement("th", null, "Prem/\xA31k Capital"), /*#__PURE__*/React.createElement("th", null, "Prob OTM"), /*#__PURE__*/React.createElement("th", null, "Ann. ROC"), /*#__PURE__*/React.createElement("th", null, "Capital Req"), /*#__PURE__*/React.createElement("th", null, "Zone"))), /*#__PURE__*/React.createElement("tbody", null, rows.map(r => {
+    const isSweet = r.pp1k >= minPP1k && r.probOTM >= target_prob;
+    const isBest = best && r.K === best.K;
+    return /*#__PURE__*/React.createElement("tr", {
+      key: r.K,
+      className: isBest ? 'hl-best' : isSweet ? 'hl-good' : ''
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontWeight: isBest ? 700 : 400,
+        color: isBest ? '#4ade80' : '#e2e8f0'
+      }
+    }, "$", r.K), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#94a3b8'
+      }
+    }, (r.pct * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, "$", r.optPrice.toFixed(2)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: '#60a5fa'
+      }
+    }, "$", (r.optPrice * 100).toFixed(2)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: r.pp1k >= 6 ? '#4ade80' : r.pp1k >= 4 ? '#fbbf24' : '#94a3b8',
+        fontWeight: r.pp1k >= minPP1k ? 600 : 400
+      }
+    }, r.pp1k.toFixed(2)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: r.probOTM >= 0.90 ? '#4ade80' : r.probOTM >= 0.80 ? '#fbbf24' : '#f87171'
+      }
+    }, (r.probOTM * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: r.annRoc > 50 ? '#4ade80' : r.annRoc > 25 ? '#a3e635' : '#94a3b8'
+      }
+    }, r.annRoc.toFixed(0), "%"), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontSize: 12,
+        color: '#64748b'
+      }
+    }, "$", r.cap.toLocaleString()), /*#__PURE__*/React.createElement("td", null, isBest ? /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: '#4ade80',
+        fontWeight: 700
+      }
+    }, "\uD83C\uDFAF BEST") : isSweet ? /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: '#a3e635'
+      }
+    }, "\u2713 SWEET") : /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: '#334155'
+      }
+    }, "--")));
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, "\u2713 SWEET = Prob OTM \u2265 ", (target_prob * 100).toFixed(0), "% AND Prem/\xA31k \u2265 ", minPP1k, " \xA0|\xA0 \uD83C\uDFAF BEST = highest Prem/\xA31k within sweet zone \xA0|\xA0 Uses Black-Scholes with r=5%")));
+}
+
+// --- Capital -----------------------------------------------------------------
+function Capital({
+  trades,
+  capital,
+  setCapital,
+  fx
+}) {
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const openTrades = trades.filter(t => t.status === 'Open');
+  const entityData = ENTITIES.map(e => {
+    const cfg = capital[e] || {
+      capital_gbp: 0,
+      margin_multiplier: 3,
+      buffer_pct: 0.32,
+      label: e
+    };
+    const base_usd = (cfg.capital_gbp || 0) * fx;
+    const buying_power = base_usd * (cfg.margin_multiplier || 3);
+    const tradeable = buying_power * (1 - (cfg.buffer_pct || 0));
+    const deployed = openTrades.filter(t => t.entity === e).reduce((s, t) => s + (t.capital || 0), 0);
+    const available = tradeable - deployed;
+    const utilisation = tradeable > 0 ? deployed / tradeable : 0;
+    return {
+      entity: e,
+      ...cfg,
+      base_usd,
+      buying_power,
+      tradeable,
+      deployed,
+      available,
+      utilisation
+    };
+  });
+  const totalBP = entityData.reduce((s, d) => s + d.buying_power, 0);
+  const totalDeployed = entityData.reduce((s, d) => s + d.deployed, 0);
+  const totalTradeable = entityData.reduce((s, d) => s + d.tradeable, 0);
+  const startEdit = (e, d) => {
+    setEditing(e);
+    setForm({
+      capital_gbp: d.capital_gbp,
+      margin_multiplier: d.margin_multiplier,
+      buffer_pct: d.buffer_pct,
+      label: d.label
+    });
+  };
+  const saveEdit = () => {
+    setCapital(p => ({
+      ...p,
+      [editing]: {
+        ...p[editing],
+        ...form,
+        capital_gbp: parseFloat(form.capital_gbp),
+        margin_multiplier: parseFloat(form.margin_multiplier),
+        buffer_pct: parseFloat(form.buffer_pct)
+      }
+    }));
+    setEditing(null);
+  };
+  const weeklyIncome = {};
+  trades.filter(t => t.status === 'Closed').forEach(t => {
+    const wk = toWeekKey(t.date_expiry);
+    weeklyIncome[wk] = (weeklyIncome[wk] || 0) + (t.income || 0);
+  });
+  const recentWeeks = Object.entries(weeklyIncome).sort((a, b) => a[0].localeCompare(b[0])).slice(-8);
+  const avgWeekly = recentWeeks.length ? recentWeeks.reduce((s, [, v]) => s + v, 0) / recentWeeks.length : 0;
+
+  // -- USD Cash / Deposits / ROC ------------------------------------
+  const aneCfg = capital['ANE'] || {};
+  const [usdCashInput, setUsdCashInput] = useState((aneCfg.usd_cash || 0).toString());
+  const [deposits, setDeposits] = useState(aneCfg.deposits || []);
+  const [newDep, setNewDep] = useState({
+    date: '',
+    amount_gbp: '',
+    note: ''
+  });
+  const [showDepForm, setShowDepForm] = useState(false);
+  const usdCash = parseFloat(usdCashInput) || 0;
+  const today_d = new Date();
+
+  // ROC: weighted by how long each deposit has been in the account
+  const rocMetrics = useMemo(() => {
+    if (!deposits || deposits.length === 0) return null;
+    const sorted = [...deposits].sort((a, b) => a.date.localeCompare(b.date));
+    const firstDate = new Date(sorted[0].date);
+    const totalDays = Math.max(1, Math.round((today_d - firstDate) / (1000 * 86400)));
+    const totalDepGBP = sorted.reduce((s, d) => s + (parseFloat(d.amount_gbp) || 0), 0);
+    const totalDepUSD = totalDepGBP * fx;
+    // Each deposit weighted by fraction of total period it has been deployed
+    const weightedUSD = sorted.reduce((s, d) => {
+      const daysIn = Math.max(0, Math.round((today_d - new Date(d.date)) / (1000 * 86400)));
+      return s + (parseFloat(d.amount_gbp) || 0) * fx * (daysIn / totalDays);
+    }, 0);
+    const annFactor = totalDays > 0 ? 365 / totalDays : 1;
+    const simpleROC = weightedUSD > 0 ? usdCash / weightedUSD * 100 : 0;
+    const annROC = simpleROC * annFactor;
+
+    // -- Period date boundaries ----------------------------------
+    const now = new Date(today_d);
+    const y = now.getFullYear(),
+      m = now.getMonth();
+    const ytdStart = new Date(y, 0, 1);
+    const prevMonthStart = new Date(y, m - 1, 1);
+    const prevMonthEnd = new Date(y, m, 0, 23, 59, 59);
+    const currMonthStart = new Date(y, m, 1);
+    // Week: Mon--Sun
+    const dow = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Mon
+    const currWeekStart = new Date(now);
+    currWeekStart.setDate(now.getDate() - dow);
+    currWeekStart.setHours(0, 0, 0, 0);
+    const prevWeekStart = new Date(currWeekStart);
+    prevWeekStart.setDate(currWeekStart.getDate() - 7);
+    const prevWeekEnd = new Date(currWeekStart);
+    prevWeekEnd.setMilliseconds(-1);
+    const thirtyAgo = new Date(now);
+    thirtyAgo.setDate(now.getDate() - 30);
+    thirtyAgo.setHours(0, 0, 0, 0);
+
+    // Helper: sum credits for CLOSED trades with expiry in [start,end]
+    const periodCredits = (start, end) => {
+      return (trades || []).filter(t => {
+        if (t.status !== 'Closed' && t.status !== 'Expired') return false;
+        const exp = new Date(t.date_expiry);
+        return exp >= start && exp <= end;
+      }).reduce((s, t) => s + (parseFloat(t.total_credit) || 0), 0);
+    };
+
+    // Helper: deposits made on or before a date (capital basis for that period)
+    const capitalAtDate = dt => {
+      return sorted.filter(d => new Date(d.date) <= dt).reduce((s, d) => s + (parseFloat(d.amount_gbp) || 0), 0) * fx;
+    };
+    const ytdCredits = periodCredits(ytdStart, now);
+    const prevMonthCredits = periodCredits(prevMonthStart, prevMonthEnd);
+    const currMonthCredits = periodCredits(currMonthStart, now);
+    const prevWeekCredits = periodCredits(prevWeekStart, prevWeekEnd);
+    const currWeekCredits = periodCredits(currWeekStart, now);
+    const thirtyDayCredits = periodCredits(thirtyAgo, now);
+    const capNow = capitalAtDate(now) || totalDepUSD;
+    const rocPct = (credits, cap) => cap > 0 ? credits / cap * 100 : 0;
+    const ytdROC = rocPct(ytdCredits, capNow);
+    const prevMonthROC = rocPct(prevMonthCredits, capitalAtDate(prevMonthEnd) || capNow);
+    const currMonthROC = rocPct(currMonthCredits, capNow);
+    const prevWeekROC = rocPct(prevWeekCredits, capitalAtDate(prevWeekEnd) || capNow);
+    const currWeekROC = rocPct(currWeekCredits, capNow);
+
+    // Earnings efficiency -- GBP per £1000 deployed over 30 days
+    const thirtyDayGBP = thirtyDayCredits / fx;
+    const per1kPerMonth = totalDepGBP > 0 ? thirtyDayGBP / (totalDepGBP / 1000) : 0;
+    const per1kPerDay = per1kPerMonth / 30;
+    return {
+      totalDays,
+      totalDepGBP,
+      totalDepUSD,
+      weightedUSD,
+      simpleROC,
+      annROC,
+      firstDate: sorted[0].date,
+      lastDate: sorted[sorted.length - 1].date,
+      ytdCredits,
+      prevMonthCredits,
+      currMonthCredits,
+      prevWeekCredits,
+      currWeekCredits,
+      thirtyDayCredits,
+      ytdROC,
+      prevMonthROC,
+      currMonthROC,
+      prevWeekROC,
+      currWeekROC,
+      per1kPerMonth,
+      per1kPerDay,
+      thirtyDayGBP,
+      prevMonthName: new Date(y, m - 1, 1).toLocaleString('default', {
+        month: 'short'
+      }),
+      prevWeekLabel: prevWeekStart.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short'
+      }) + ' -- ' + prevWeekEnd.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short'
+      }),
+      currWeekLabel: currWeekStart.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short'
+      }) + ' -- today'
+    };
+  }, [deposits, usdCash, fx, trades]);
+  const addDeposit = () => {
+    if (!newDep.date || !newDep.amount_gbp) return;
+    const dep = {
+      id: Date.now(),
+      date: newDep.date,
+      amount_gbp: parseFloat(newDep.amount_gbp),
+      note: newDep.note
+    };
+    const updated = [...deposits, dep].sort((a, b) => a.date.localeCompare(b.date));
+    setDeposits(updated);
+    setCapital(p => ({
+      ...p,
+      ANE: {
+        ...p.ANE,
+        deposits: updated
+      }
+    }));
+    setNewDep({
+      date: '',
+      amount_gbp: '',
+      note: ''
+    });
+    setShowDepForm(false);
+  };
+  const removeDep = id => {
+    const updated = deposits.filter(d => d.id !== id);
+    setDeposits(updated);
+    setCapital(p => ({
+      ...p,
+      ANE: {
+        ...p.ANE,
+        deposits: updated
+      }
+    }));
+  };
+  const saveUsdCash = v => {
+    setUsdCashInput(v);
+    setCapital(p => ({
+      ...p,
+      ANE: {
+        ...p.ANE,
+        usd_cash: parseFloat(v) || 0
+      }
+    }));
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 24
+    }
+  }, editing && /*#__PURE__*/React.createElement("div", {
+    className: "overlay",
+    onClick: e => e.target === e.currentTarget && setEditing(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "modal",
+    style: {
+      maxWidth: 480
+    }
+  }, /*#__PURE__*/React.createElement("h3", {
+    style: {
+      marginBottom: 4,
+      fontSize: 15,
+      fontWeight: 600
+    }
+  }, "Edit Capital -- ", editing), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#475569',
+      marginBottom: 18
+    }
+  }, "Buying Power = \xA3 Capital x FX x Margin Multiplier"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Label"), /*#__PURE__*/React.createElement("input", {
+    value: form.label,
+    onChange: e => setForm(p => ({
+      ...p,
+      label: e.target.value
+    }))
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0a1628',
+      border: '1px solid #1e3a5f',
+      borderRadius: 8,
+      padding: '14px 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#3b82f6',
+      fontWeight: 600,
+      marginBottom: 12,
+      letterSpacing: '0.04em'
+    }
+  }, "BUYING POWER FORMULA"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr auto 1fr',
+      gap: 8,
+      alignItems: 'end',
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Base Capital (\xA3)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: form.capital_gbp,
+    onChange: e => setForm(p => ({
+      ...p,
+      capital_gbp: e.target.value
+    })),
+    placeholder: "300000"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      paddingBottom: 8,
+      color: '#475569',
+      fontSize: 18
+    }
+  }, "x"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "FX (from header)"), /*#__PURE__*/React.createElement("input", {
+    value: fx.toFixed(4),
+    disabled: true,
+    style: {
+      opacity: 0.5
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      paddingBottom: 8,
+      color: '#475569',
+      fontSize: 18
+    }
+  }, "x"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Margin Multiplier"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: form.margin_multiplier,
+    onChange: e => setForm(p => ({
+      ...p,
+      margin_multiplier: e.target.value
+    })),
+    step: "0.5",
+    placeholder: "3"
+  }))), form.capital_gbp && form.margin_multiplier && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0f2040',
+      borderRadius: 6,
+      padding: '10px 12px',
+      fontSize: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#64748b'
+    }
+  }, "Result: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#e2e8f0',
+      fontFamily: 'monospace'
+    }
+  }, "\xA3", Number(form.capital_gbp).toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#475569'
+    }
+  }, " x ", fx.toFixed(4), " x ", form.margin_multiplier, " = "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#60a5fa',
+      fontWeight: 700,
+      fontFamily: 'monospace'
+    }
+  }, fmt$(parseFloat(form.capital_gbp) * fx * parseFloat(form.margin_multiplier))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#475569'
+    }
+  }, " buying power"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 8
+    }
+  }, "Reserve Buffer (keep this % undeployed as safety)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '14px 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: '#94a3b8'
+    }
+  }, "Buffer level"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      color: '#fbbf24',
+      fontFamily: 'monospace'
+    }
+  }, form.buffer_pct ? (parseFloat(form.buffer_pct) * 100).toFixed(0) : 32, "%")), /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "0.10",
+    max: "0.50",
+    step: "0.01",
+    value: form.buffer_pct || 0.32,
+    onChange: e => setForm(p => ({
+      ...p,
+      buffer_pct: parseFloat(e.target.value)
+    })),
+    style: {
+      width: '100%',
+      accentColor: '#f59e0b',
+      cursor: 'pointer'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: 10,
+      color: '#475569',
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "10% (aggressive)"), /*#__PURE__*/React.createElement("span", null, "30%"), /*#__PURE__*/React.createElement("span", null, "50% (conservative)")), form.capital_gbp && form.margin_multiplier && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 6,
+      padding: '8px 10px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 2
+    }
+  }, "Reserved (buffer)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 600,
+      color: '#fbbf24'
+    }
+  }, fmt$(parseFloat(form.capital_gbp) * fx * parseFloat(form.margin_multiplier) * parseFloat(form.buffer_pct || 0.32)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#052e16',
+      border: '1px solid #166534',
+      borderRadius: 6,
+      padding: '8px 10px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#4ade80',
+      marginBottom: 2
+    }
+  }, "Tradeable"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#4ade80'
+    }
+  }, fmt$(parseFloat(form.capital_gbp) * fx * parseFloat(form.margin_multiplier) * (1 - parseFloat(form.buffer_pct || 0.32))))))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      marginTop: 20,
+      justifyContent: 'flex-end'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    onClick: () => setEditing(null)
+  }, "Cancel"), /*#__PURE__*/React.createElement("button", {
+    className: "btn-primary",
+    onClick: saveEdit
+  }, "Save")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      gap: 16,
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Total Buying Power",
+    value: fmt$(totalBP),
+    sub: fmtGBP(totalBP, fx) + ' equiv.',
+    color: "#60a5fa"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Tradeable (after buffer)",
+    value: fmt$(totalTradeable),
+    sub: fmtGBP(totalTradeable, fx),
+    color: "#a78bfa"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Currently Deployed",
+    value: fmt$(totalDeployed),
+    sub: fmtGBP(totalDeployed, fx),
+    color: "#fbbf24"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Avg Weekly Income (8wk)",
+    value: fmt$(avgWeekly),
+    sub: fmtGBP(avgWeekly, fx) + '/wk avg',
+    color: "#4ade80"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 16,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Broker Cash Balance & Return on Capital"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 6
+    }
+  }, "USD Cash in broker account -- accumulated premium not yet drawn"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: 10,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      color: '#64748b',
+      fontSize: 14,
+      fontWeight: 600
+    }
+  }, "$"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: usdCashInput,
+    onChange: e => saveUsdCash(e.target.value),
+    style: {
+      paddingLeft: 22,
+      fontFamily: 'monospace',
+      fontSize: 15,
+      fontWeight: 600
+    },
+    placeholder: "30400"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#475569'
+    }
+  }, "\u2248 ", fmtGBP(usdCash, fx), " GBP"))), rocMetrics && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 10,
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    }
+  }, "Simple ROC"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 24,
+      fontWeight: 700,
+      color: rocMetrics.simpleROC > 0 ? '#4ade80' : '#f87171',
+      fontFamily: 'monospace'
+    }
+  }, rocMetrics.simpleROC.toFixed(2), "%"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginTop: 4
+    }
+  }, "on weighted capital deployed")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    }
+  }, "Annualised ROC"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 24,
+      fontWeight: 700,
+      color: rocMetrics.annROC > 0 ? '#a78bfa' : '#f87171',
+      fontFamily: 'monospace'
+    }
+  }, rocMetrics.annROC.toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginTop: 4
+    }
+  }, rocMetrics.totalDays, "d holding period")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '10px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 3
+    }
+  }, "Total Deposited"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#e2e8f0'
+    }
+  }, "\xA3", rocMetrics.totalDepGBP.toLocaleString()), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, fmt$(rocMetrics.totalDepUSD), " USD")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '10px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 3
+    }
+  }, "Weighted Cap (time-adj)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#60a5fa'
+    }
+  }, fmt$(rocMetrics.weightedUSD)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, "first dep: ", fmtDate(rocMetrics.firstDate)))), !rocMetrics && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 12,
+      padding: '10px 0'
+    }
+  }, "Add deposit dates below to calculate time-weighted ROC")), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header",
+    style: {
+      marginBottom: 0
+    }
+  }, "Capital Deposit History"), /*#__PURE__*/React.createElement("button", {
+    className: "btn-primary",
+    style: {
+      fontSize: 11,
+      padding: '4px 12px'
+    },
+    onClick: () => setShowDepForm(p => !p)
+  }, "+ Add Deposit")), showDepForm && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0a1628',
+      border: '1px solid #1e3a5f',
+      borderRadius: 8,
+      padding: '12px 14px',
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr auto',
+      gap: 8,
+      alignItems: 'end'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 3
+    }
+  }, "Date"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: newDep.date,
+    onChange: e => setNewDep(p => ({
+      ...p,
+      date: e.target.value
+    }))
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 3
+    }
+  }, "Amount (\xA3)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: newDep.amount_gbp,
+    onChange: e => setNewDep(p => ({
+      ...p,
+      amount_gbp: e.target.value
+    })),
+    placeholder: "50000"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 3
+    }
+  }, "Note"), /*#__PURE__*/React.createElement("input", {
+    value: newDep.note,
+    onChange: e => setNewDep(p => ({
+      ...p,
+      note: e.target.value
+    })),
+    placeholder: "e.g. top-up"
+  })), /*#__PURE__*/React.createElement("button", {
+    className: "btn-success",
+    style: {
+      padding: '7px 14px',
+      fontSize: 12
+    },
+    onClick: addDeposit
+  }, "Add"))), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Date"), /*#__PURE__*/React.createElement("th", null, "Amount (\xA3)"), /*#__PURE__*/React.createElement("th", null, "Amount ($)"), /*#__PURE__*/React.createElement("th", null, "Days in"), /*#__PURE__*/React.createElement("th", null, "Note"), /*#__PURE__*/React.createElement("th", null))), /*#__PURE__*/React.createElement("tbody", null, deposits.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+    colSpan: 6,
+    style: {
+      color: '#475569',
+      textAlign: 'center',
+      padding: '16px'
+    }
+  }, "No deposits logged -- add them to enable ROC calculation")), [...deposits].sort((a, b) => a.date.localeCompare(b.date)).map(d => {
+    const daysIn = Math.max(0, Math.round((new Date() - new Date(d.date)) / (1000 * 86400)));
+    return /*#__PURE__*/React.createElement("tr", {
+      key: d.id
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontSize: 12
+      }
+    }, fmtDate(d.date)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#a3e635',
+        fontFamily: 'monospace'
+      }
+    }, "\xA3", (d.amount_gbp || 0).toLocaleString()), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#60a5fa',
+        fontFamily: 'monospace'
+      }
+    }, fmt$(d.amount_gbp * fx)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#94a3b8'
+      }
+    }, daysIn, "d"), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#475569',
+        fontSize: 12
+      }
+    }, d.note || '--'), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
+      className: "btn-danger",
+      style: {
+        padding: '2px 7px',
+        fontSize: 11
+      },
+      onClick: () => removeDep(d.id)
+    }, "\u2715")));
+  })), deposits.length > 0 && /*#__PURE__*/React.createElement("tfoot", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      borderTop: '1px solid #334155'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      color: '#64748b',
+      fontWeight: 600,
+      fontSize: 12
+    }
+  }, "TOTAL"), /*#__PURE__*/React.createElement("td", {
+    style: {
+      color: '#a3e635',
+      fontFamily: 'monospace',
+      fontWeight: 700
+    }
+  }, "\xA3", deposits.reduce((s, d) => s + (d.amount_gbp || 0), 0).toLocaleString()), /*#__PURE__*/React.createElement("td", {
+    style: {
+      color: '#60a5fa',
+      fontFamily: 'monospace',
+      fontWeight: 700
+    }
+  }, fmt$(deposits.reduce((s, d) => s + (d.amount_gbp || 0), 0) * fx)), /*#__PURE__*/React.createElement("td", {
+    colSpan: 3
+  })))))), rocMetrics && /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Period Return on Capital & Earnings Efficiency"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(5,1fr)',
+      gap: 10,
+      marginBottom: 16
+    }
+  }, [{
+    label: 'YTD',
+    roc: rocMetrics.ytdROC,
+    credits: rocMetrics.ytdCredits,
+    sub: 'Jan 1 -- today'
+  }, {
+    label: `${rocMetrics.prevMonthName} (prev month)`,
+    roc: rocMetrics.prevMonthROC,
+    credits: rocMetrics.prevMonthCredits,
+    sub: 'full calendar month'
+  }, {
+    label: 'This Month',
+    roc: rocMetrics.currMonthROC,
+    credits: rocMetrics.currMonthCredits,
+    sub: 'month to date'
+  }, {
+    label: `Prev Week`,
+    roc: rocMetrics.prevWeekROC,
+    credits: rocMetrics.prevWeekCredits,
+    sub: rocMetrics.prevWeekLabel
+  }, {
+    label: 'This Week',
+    roc: rocMetrics.currWeekROC,
+    credits: rocMetrics.currWeekCredits,
+    sub: rocMetrics.currWeekLabel
+  }].map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.label,
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 6,
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
+      lineHeight: 1.3
+    }
+  }, p.label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 22,
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      color: p.roc > 0 ? '#4ade80' : p.roc === 0 ? '#94a3b8' : '#f87171'
+    }
+  }, p.roc.toFixed(2), "%"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#60a5fa',
+      fontFamily: 'monospace',
+      marginTop: 4
+    }
+  }, fmt$(p.credits)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginTop: 2
+    }
+  }, p.sub)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: '1px solid #1e293b',
+      paddingTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      marginBottom: 10,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    }
+  }, "Earnings Efficiency -- based on last 30 days, denominated in \xA3"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 4
+    }
+  }, "30-Day Earnings"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      color: '#fbbf24'
+    }
+  }, fmt$(rocMetrics.thirtyDayCredits)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#94a3b8',
+      marginTop: 2
+    }
+  }, "\u2248 \xA3", rocMetrics.thirtyDayGBP.toLocaleString('en-GB', {
+    maximumFractionDigits: 0
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 4
+    }
+  }, "Avg per \xA31,000 / Month"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      color: '#a78bfa'
+    }
+  }, "\xA3", rocMetrics.per1kPerMonth.toFixed(2)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#94a3b8',
+      marginTop: 2
+    }
+  }, "per \xA31k deployed \xB7 30d basis")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 4
+    }
+  }, "Avg per \xA31,000 / Day"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      color: '#38bdf8'
+    }
+  }, "\xA3", rocMetrics.per1kPerDay.toFixed(2)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#94a3b8',
+      marginTop: 2
+    }
+  }, "per \xA31k deployed \xB7 30d basis")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 4
+    }
+  }, "Annualised (from annROC)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      color: rocMetrics.annROC > 0 ? '#a78bfa' : '#f87171'
+    }
+  }, rocMetrics.annROC.toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#94a3b8',
+      marginTop: 2
+    }
+  }, "time-weighted \xB7 ", rocMetrics.totalDays, "d"))))), entityData.map(d => /*#__PURE__*/React.createElement("div", {
+    key: d.entity,
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 18
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(EntityBadge, {
+    v: d.entity
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: 10,
+      fontSize: 13,
+      color: '#94a3b8'
+    }
+  }, d.label)), /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    style: {
+      fontSize: 11,
+      padding: '4px 12px'
+    },
+    onClick: () => startEdit(d.entity, d)
+  }, "Edit Capital")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '14px 18px',
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 10,
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em'
+    }
+  }, "Buying Power Formula"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+      fontSize: 13
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 6,
+      padding: '6px 12px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 2
+    }
+  }, "Base Capital"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#e2e8f0'
+    }
+  }, "\xA3", (d.capital_gbp || 0).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 18
+    }
+  }, "x"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 6,
+      padding: '6px 12px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 2
+    }
+  }, "FX Rate"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#e2e8f0'
+    }
+  }, fx.toFixed(4))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 18
+    }
+  }, "x"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 6,
+      padding: '6px 12px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 2
+    }
+  }, "Margin"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#e2e8f0'
+    }
+  }, d.margin_multiplier, "x")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 18
+    }
+  }, "="), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#0f2040',
+      border: '1px solid #1e3a5f',
+      borderRadius: 6,
+      padding: '6px 14px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#3b82f6',
+      marginBottom: 2
+    }
+  }, "Buying Power"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#60a5fa',
+      fontSize: 15
+    }
+  }, fmt$(d.buying_power))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 18
+    }
+  }, "\u2212"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 6,
+      padding: '6px 12px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      marginBottom: 2
+    }
+  }, "Buffer ", (d.buffer_pct * 100).toFixed(0), "%"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#fbbf24'
+    }
+  }, fmt$(d.buying_power * d.buffer_pct))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#475569',
+      fontSize: 18
+    }
+  }, "="), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#052e16',
+      border: '1px solid #166534',
+      borderRadius: 6,
+      padding: '6px 14px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#22c55e',
+      marginBottom: 2
+    }
+  }, "Tradeable"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      color: '#4ade80',
+      fontSize: 15
+    }
+  }, fmt$(d.tradeable))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      gap: 12,
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4
+    }
+  }, "Base Capital"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: '#e2e8f0'
+    }
+  }, "\xA3", (d.capital_gbp || 0).toLocaleString()), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginTop: 2
+    }
+  }, fmt$(d.base_usd), " USD equiv.")), /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4
+    }
+  }, "Tradeable"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: '#a78bfa'
+    }
+  }, fmt$(d.tradeable)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginTop: 2
+    }
+  }, fmtGBP(d.tradeable, fx), " equiv.")), /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4
+    }
+  }, "Deployed"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: '#fbbf24'
+    }
+  }, fmt$(d.deployed)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginTop: 2
+    }
+  }, fmtGBP(d.deployed, fx), " equiv.")), /*#__PURE__*/React.createElement("div", {
+    className: "card-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginBottom: 4
+    }
+  }, "Available Now"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: d.available >= 0 ? '#4ade80' : '#f87171'
+    }
+  }, fmt$(d.available)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      marginTop: 2
+    }
+  }, fmtGBP(d.available, fx), " equiv."))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 16,
+      alignItems: 'start'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: '#64748b'
+    }
+  }, "Utilisation of tradeable capacity"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: d.utilisation > 0.90 ? '#f87171' : d.utilisation > 0.70 ? '#fbbf24' : '#4ade80'
+    }
+  }, (d.utilisation * 100).toFixed(1), "%")), /*#__PURE__*/React.createElement("div", {
+    className: "progress-bar",
+    style: {
+      height: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "progress-fill",
+    style: {
+      width: Math.min(d.utilisation * 100, 100) + '%',
+      background: d.utilisation > 0.90 ? '#ef4444' : d.utilisation > 0.70 ? '#f59e0b' : '#22c55e'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 5,
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, /*#__PURE__*/React.createElement("span", null, fmt$(d.deployed), " deployed"), /*#__PURE__*/React.createElement("span", null, fmt$(d.tradeable), " tradeable"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#060d1a',
+      border: '1px solid #1e293b',
+      borderRadius: 8,
+      padding: '12px 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#64748b'
+    }
+  }, "Reserve Buffer"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 17,
+      fontWeight: 700,
+      color: '#fbbf24',
+      fontFamily: 'monospace'
+    }
+  }, (d.buffer_pct * 100).toFixed(0), "%")), /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "0.10",
+    max: "0.50",
+    step: "0.01",
+    value: d.buffer_pct,
+    onChange: e => {
+      const v = parseFloat(e.target.value);
+      setCapital(p => ({
+        ...p,
+        [d.entity]: {
+          ...p[d.entity],
+          buffer_pct: v
+        }
+      }));
+    },
+    style: {
+      width: '100%',
+      accentColor: '#f59e0b',
+      cursor: 'pointer'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: 10,
+      color: '#334155',
+      marginTop: 3
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "10%"), /*#__PURE__*/React.createElement("span", null, "30%"), /*#__PURE__*/React.createElement("span", null, "50%")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 6,
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 5,
+      padding: '5px 8px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#64748b'
+    }
+  }, "Reserved"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontSize: 12,
+      fontWeight: 600,
+      color: '#fbbf24'
+    }
+  }, fmt$(d.buying_power * d.buffer_pct))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#052e16',
+      border: '1px solid #166534',
+      borderRadius: 5,
+      padding: '5px 8px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4ade80'
+    }
+  }, "Tradeable"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontSize: 12,
+      fontWeight: 700,
+      color: '#4ade80'
+    }
+  }, fmt$(d.tradeable)))))), openTrades.filter(t => t.entity === d.entity).length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header",
+    style: {
+      marginBottom: 8
+    }
+  }, "Open Positions"), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Ticker"), /*#__PURE__*/React.createElement("th", null, "Strike"), /*#__PURE__*/React.createElement("th", null, "Contracts"), /*#__PURE__*/React.createElement("th", null, "Capital ($)"), /*#__PURE__*/React.createElement("th", null, "Capital (\xA3)"), /*#__PURE__*/React.createElement("th", null, "Credit ($)"), /*#__PURE__*/React.createElement("th", null, "Expiry"), /*#__PURE__*/React.createElement("th", null, "DTE"))), /*#__PURE__*/React.createElement("tbody", null, openTrades.filter(t => t.entity === d.entity).map(t => {
+    const dte = daysBetween(now, t.date_expiry);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: t.id
+    }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "ticker-chip"
+    }, t.ticker)), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, "$", t.strike), /*#__PURE__*/React.createElement("td", null, t.contracts), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, fmt$(t.capital)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: '#a3e635'
+      }
+    }, fmtGBP(t.capital, fx)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: '#60a5fa'
+      }
+    }, fmt$(t.total_credit)), /*#__PURE__*/React.createElement("td", null, fmtDate(t.date_expiry)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: dte <= 1 ? '#f87171' : dte <= 3 ? '#fbbf24' : '#94a3b8'
+      }
+    }, dte, "d"));
+  }))))))));
+}
+
+// --- Analytics ---------------------------------------------------------------
+function Analytics({
+  trades,
+  stocks,
+  fx
+}) {
+  const ivChartRef = useRef(null);
+  const closed = trades.filter(t => t.status === 'Closed');
+
+  // By ticker
+  const tickerStats = {};
+  closed.forEach(t => {
+    if (!tickerStats[t.ticker]) tickerStats[t.ticker] = {
+      income: 0,
+      trades: 0,
+      wins: 0,
+      totalCredit: 0,
+      capital: 0,
+      pp1ks: []
+    };
+    const d = tickerStats[t.ticker];
+    d.income += t.income || 0;
+    d.trades++;
+    if (t.result === 'W') d.wins++;
+    d.totalCredit += t.total_credit || 0;
+    d.capital += t.capital || 0;
+    d.pp1ks.push(premPer1k(t.total_credit, t.capital));
+  });
+  const tickerTable = Object.entries(tickerStats).map(([ticker, d]) => ({
+    ticker,
+    income: d.income,
+    trades: d.trades,
+    winRate: d.wins / d.trades,
+    avgPP1k: d.pp1ks.reduce((s, v) => s + v, 0) / d.pp1ks.length,
+    totalCapital: d.capital,
+    roc: d.capital > 0 ? d.income / d.capital * 100 : 0
+  })).sort((a, b) => b.income - a.income);
+
+  // Monthly
+  const monthMap = {};
+  closed.forEach(t => {
+    var _t$date_expiry;
+    const m = (_t$date_expiry = t.date_expiry) === null || _t$date_expiry === void 0 ? void 0 : _t$date_expiry.slice(0, 7);
+    if (m) monthMap[m] = (monthMap[m] || 0) + (t.income || 0);
+  });
+  const months = Object.keys(monthMap).sort();
+  const rocChartRef = useRef(null);
+  useEffect(() => {
+    if (!rocChartRef.current || months.length === 0) return;
+    const ctx = rocChartRef.current.getContext('2d');
+    const ch = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Monthly Income ($)',
+          data: months.map(m => monthMap[m]),
+          backgroundColor: months.map(m => monthMap[m] >= 0 ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.6)'),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#e2e8f0',
+            bodyColor: '#94a3b8',
+            callbacks: {
+              label: ctx => '$' + ctx.raw.toLocaleString()
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#64748b'
+            },
+            grid: {
+              color: '#1e293b'
+            }
+          },
+          y: {
+            ticks: {
+              color: '#64748b',
+              callback: v => '$' + v.toLocaleString()
+            },
+            grid: {
+              color: '#1e293b'
+            }
+          }
+        }
+      }
+    });
+    return () => ch.destroy();
+  }, [trades]);
+
+  // Stock universe with GS data
+  const [editStock, setEditStock] = useState(null);
+  const [stockList, setStockList] = useState(stocks);
+  const [stockForm, setStockForm] = useState({});
+  const saveStock = () => {
+    setStockList(p => p.map(s => s.ticker === editStock ? {
+      ...s,
+      ...stockForm
+    } : s));
+    setEditStock(null);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 24
+    }
+  }, editStock && /*#__PURE__*/React.createElement("div", {
+    className: "overlay",
+    onClick: e => e.target === e.currentTarget && setEditStock(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "modal",
+    style: {
+      maxWidth: 500
+    }
+  }, /*#__PURE__*/React.createElement("h3", {
+    style: {
+      marginBottom: 16,
+      fontSize: 15,
+      fontWeight: 600
+    }
+  }, "Stock Universe -- ", editStock), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "GS Price Target ($)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: stockForm.gs_target || '',
+    onChange: e => setStockForm(p => ({
+      ...p,
+      gs_target: e.target.value ? parseFloat(e.target.value) : null
+    }))
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Analyst Rating (GS/MS/etc)"), /*#__PURE__*/React.createElement("input", {
+    value: stockForm.gs_rating || '',
+    onChange: e => setStockForm(p => ({
+      ...p,
+      gs_rating: e.target.value
+    })),
+    placeholder: "Buy / Neutral / Sell"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Current IV Rank (0-1)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: stockForm.iv_rank || '',
+    onChange: e => setStockForm(p => ({
+      ...p,
+      iv_rank: e.target.value ? parseFloat(e.target.value) : null
+    })),
+    step: "0.01"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Sweet Strike % OTM"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: stockForm.sweet_strike_pct || '',
+    onChange: e => setStockForm(p => ({
+      ...p,
+      sweet_strike_pct: e.target.value ? parseFloat(e.target.value) : null
+    })),
+    step: "0.01"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      gridColumn: '1/-1'
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Notes"), /*#__PURE__*/React.createElement("textarea", {
+    value: stockForm.notes || '',
+    onChange: e => setStockForm(p => ({
+      ...p,
+      notes: e.target.value
+    })),
+    rows: 3,
+    style: {
+      resize: 'vertical'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      marginTop: 16,
+      justifyContent: 'flex-end'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    onClick: () => setEditStock(null)
+  }, "Cancel"), /*#__PURE__*/React.createElement("button", {
+    className: "btn-primary",
+    onClick: saveStock
+  }, "Save")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '2fr 1fr',
+      gap: 16,
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Monthly Income"), /*#__PURE__*/React.createElement("div", {
+    className: "chart-container-lg"
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: rocChartRef
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Performance Summary"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10
+    }
+  }, [{
+    label: 'Total Trades',
+    value: closed.length,
+    color: '#e2e8f0'
+  }, {
+    label: 'Total Income',
+    value: fmt$(closed.reduce((s, t) => s + (t.income || 0), 0)),
+    color: '#4ade80'
+  }, {
+    label: 'Largest Win',
+    value: fmt$(Math.max(...closed.filter(t => t.result === 'W').map(t => t.income || 0), 0)),
+    color: '#4ade80'
+  }, {
+    label: 'Largest Loss',
+    value: fmt$(Math.min(...closed.filter(t => t.result === 'L').map(t => t.income || 0), 0) || 0),
+    color: '#f87171'
+  }, {
+    label: 'Win Rate',
+    value: closed.length ? (closed.filter(t => t.result === 'W').length / closed.length * 100).toFixed(0) + '%' : '--',
+    color: '#60a5fa'
+  }, {
+    label: 'Avg Win',
+    value: fmt$(closed.filter(t => t.result === 'W').reduce((s, t) => s + (t.income || 0), 0) / (closed.filter(t => t.result === 'W').length || 1)),
+    color: '#4ade80'
+  }, {
+    label: 'Avg Loss',
+    value: fmt$(closed.filter(t => t.result === 'L').reduce((s, t) => s + (t.income || 0), 0) / (closed.filter(t => t.result === 'L').length || 1)),
+    color: '#f87171'
+  }].map(r => /*#__PURE__*/React.createElement("div", {
+    key: r.label,
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '6px 0',
+      borderBottom: '1px solid #1e293b'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: '#64748b'
+    }
+  }, r.label), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: r.color,
+      fontFamily: 'monospace'
+    }
+  }, r.value)))))), /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Performance by Ticker"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Ticker"), /*#__PURE__*/React.createElement("th", null, "Trades"), /*#__PURE__*/React.createElement("th", null, "Win Rate"), /*#__PURE__*/React.createElement("th", null, "Total Income"), /*#__PURE__*/React.createElement("th", null, "Avg Prem/\xA31k"), /*#__PURE__*/React.createElement("th", null, "Total Capital Used"), /*#__PURE__*/React.createElement("th", null, "Overall ROC"))), /*#__PURE__*/React.createElement("tbody", null, tickerTable.map(r => /*#__PURE__*/React.createElement("tr", {
+    key: r.ticker
+  }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+    className: "ticker-chip"
+  }, r.ticker)), /*#__PURE__*/React.createElement("td", null, r.trades), /*#__PURE__*/React.createElement("td", {
+    style: {
+      color: r.winRate > 0.85 ? '#4ade80' : r.winRate > 0.70 ? '#fbbf24' : '#f87171'
+    }
+  }, (r.winRate * 100).toFixed(0), "%"), /*#__PURE__*/React.createElement("td", {
+    style: {
+      color: r.income >= 0 ? '#4ade80' : '#f87171'
+    },
+    className: "mono"
+  }, fmt$(r.income)), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      color: r.avgPP1k >= 6 ? '#4ade80' : r.avgPP1k >= 4 ? '#fbbf24' : '#94a3b8'
+    }
+  }, r.avgPP1k.toFixed(2)), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      fontSize: 12,
+      color: '#64748b'
+    }
+  }, fmt$(r.totalCapital)), /*#__PURE__*/React.createElement("td", {
+    style: {
+      color: r.roc > 0 ? '#4ade80' : '#f87171'
+    },
+    className: "mono"
+  }, r.roc.toFixed(1), "%"))))))), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Stock Universe & Analyst Targets"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Ticker"), /*#__PURE__*/React.createElement("th", null, "Sector"), /*#__PURE__*/React.createElement("th", null, "GS Target"), /*#__PURE__*/React.createElement("th", null, "Rating"), /*#__PURE__*/React.createElement("th", null, "IV Rank"), /*#__PURE__*/React.createElement("th", null, "Sweet %OTM"), /*#__PURE__*/React.createElement("th", null, "Notes"), /*#__PURE__*/React.createElement("th", null))), /*#__PURE__*/React.createElement("tbody", null, stockList.map(s => {
+    var _s$gs_rating, _s$gs_rating2;
+    const stats = tickerStats[s.ticker];
+    return /*#__PURE__*/React.createElement("tr", {
+      key: s.ticker
+    }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "ticker-chip"
+    }, s.ticker)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontSize: 12,
+        color: '#64748b'
+      }
+    }, s.sector), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: '#60a5fa'
+      }
+    }, s.gs_target ? fmt$(s.gs_target) : '--'), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontSize: 12,
+        color: (_s$gs_rating = s.gs_rating) !== null && _s$gs_rating !== void 0 && _s$gs_rating.toLowerCase().includes('buy') ? '#4ade80' : (_s$gs_rating2 = s.gs_rating) !== null && _s$gs_rating2 !== void 0 && _s$gs_rating2.toLowerCase().includes('sell') ? '#f87171' : '#94a3b8'
+      }
+    }, s.gs_rating || '--'), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: s.iv_rank > 0.7 ? '#f87171' : s.iv_rank > 0.4 ? '#fbbf24' : '#4ade80'
+      }
+    }, s.iv_rank != null ? (s.iv_rank * 100).toFixed(0) + '%' : '--'), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, s.sweet_strike_pct ? (s.sweet_strike_pct * 100).toFixed(0) + '%' : '--'), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontSize: 11,
+        color: '#475569',
+        maxWidth: 180,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      },
+      title: s.notes
+    }, s.notes), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
+      className: "btn-ghost",
+      style: {
+        padding: '3px 8px',
+        fontSize: 11
+      },
+      onClick: () => {
+        setEditStock(s.ticker);
+        setStockForm({
+          ...s
+        });
+      }
+    }, "Edit")));
+  }))))));
+}
+
+// --- Report -------------------------------------------------------------------
+function Report({
+  trades,
+  fx
+}) {
+  const weeks = useMemo(() => {
+    const s = new Set(trades.map(t => toWeekKey(t.date_entry)));
+    return [...s].sort().reverse();
+  }, [trades]);
+  const [selWeek, setSelWeek] = useState(weeks[0] || '');
+  const weekTrades = trades.filter(t => toWeekKey(t.date_entry) === selWeek);
+  const closed = weekTrades.filter(t => t.status === 'Closed');
+  const open = weekTrades.filter(t => t.status === 'Open');
+  const totalCredit = weekTrades.reduce((s, t) => s + (t.total_credit || 0), 0);
+  const totalIncome = closed.reduce((s, t) => s + (t.income || 0), 0);
+  const totalCap = weekTrades.reduce((s, t) => s + (t.capital || 0), 0);
+  const weekLabel = selWeek ? new Date(selWeek).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  }) : '';
+  const textReport = `ASPIRE OPTIONS -- WEEKLY SUMMARY
+Week of: ${weekLabel}
+Generated: ${new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  })}
+
+═══════════════════════════════════════
+OVERVIEW
+═══════════════════════════════════════
+Total Positions:    ${weekTrades.length}
+Open:               ${open.length}
+Closed:             ${closed.length}
+Capital Deployed:   ${fmt$(totalCap)}
+Total Premium:      ${fmt$(totalCredit)}
+Income Realised:    ${fmt$(totalIncome)} (${fmtGBP(totalIncome, fx)})
+Win Rate:           ${closed.length ? (closed.filter(t => t.result === 'W').length / closed.length * 100).toFixed(0) + '%' : 'N/A'}
+
+═══════════════════════════════════════
+POSITIONS
+═══════════════════════════════════════
+${weekTrades.map(t => `${t.entity.padEnd(8)} ${t.ticker.padEnd(6)} ${t.contracts.toString().padStart(3)}x $${t.strike.toString().padEnd(8)} Cap: ${fmt$(t.capital).padEnd(10)} Credit: ${fmt$(t.total_credit).padEnd(8)} ${t.status.padEnd(8)} ${t.result || '--'} ${t.income ? fmt$(t.income) : ''}`).join('\n')}
+
+═══════════════════════════════════════
+NOTES
+═══════════════════════════════════════
+${weekTrades.filter(t => t.comment).map(t => `${t.ticker}: ${t.comment}`).join('\n') || 'None'}
+`;
+  const copy = () => navigator.clipboard.writeText(textReport).then(() => alert('Copied to clipboard'));
+  const print = () => window.print();
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 24
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 12,
+      marginBottom: 20,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Select Week"), /*#__PURE__*/React.createElement("select", {
+    value: selWeek,
+    onChange: e => setSelWeek(e.target.value),
+    style: {
+      width: 200
+    }
+  }, weeks.map(w => /*#__PURE__*/React.createElement("option", {
+    key: w,
+    value: w
+  }, "Week of ", new Date(w).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 18,
+      display: 'flex',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    onClick: copy
+  }, "\uD83D\uDCCB Copy Text"), /*#__PURE__*/React.createElement("button", {
+    className: "btn-ghost",
+    onClick: print
+  }, "\uD83D\uDDA8 Print"))), selWeek && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      gap: 12,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Positions",
+    value: weekTrades.length,
+    sub: `${open.length} open · ${closed.length} closed`,
+    color: "#60a5fa"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Capital Deployed",
+    value: fmt$(totalCap),
+    color: "#fbbf24"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Total Premium",
+    value: fmt$(totalCredit),
+    color: "#c084fc"
+  }), /*#__PURE__*/React.createElement(MetricCard, {
+    label: "Income Realised",
+    value: fmt$(totalIncome),
+    sub: fmtGBP(totalIncome, fx),
+    color: totalIncome >= 0 ? '#4ade80' : '#f87171'
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "All Positions -- Week of ", weekLabel), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Entity"), /*#__PURE__*/React.createElement("th", null, "Ticker"), /*#__PURE__*/React.createElement("th", null, "Contracts"), /*#__PURE__*/React.createElement("th", null, "Strike"), /*#__PURE__*/React.createElement("th", null, "Capital"), /*#__PURE__*/React.createElement("th", null, "Credit"), /*#__PURE__*/React.createElement("th", null, "Prem/\xA31k"), /*#__PURE__*/React.createElement("th", null, "Prob%"), /*#__PURE__*/React.createElement("th", null, "Entry"), /*#__PURE__*/React.createElement("th", null, "Expiry"), /*#__PURE__*/React.createElement("th", null, "Status"), /*#__PURE__*/React.createElement("th", null, "W/L"), /*#__PURE__*/React.createElement("th", null, "Income"), /*#__PURE__*/React.createElement("th", null, "Comment"))), /*#__PURE__*/React.createElement("tbody", null, weekTrades.map(t => {
+    const pp1k = premPer1k(t.total_credit, t.capital);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: t.id
+    }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(EntityBadge, {
+      v: t.entity
+    })), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "ticker-chip"
+    }, t.ticker)), /*#__PURE__*/React.createElement("td", null, t.contracts), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, "$", t.strike), /*#__PURE__*/React.createElement("td", {
+      className: "mono"
+    }, fmt$(t.capital)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: '#60a5fa'
+      }
+    }, fmt$(t.total_credit)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        color: pp1k >= 6 ? '#4ade80' : pp1k >= 4 ? '#fbbf24' : '#94a3b8'
+      }
+    }, pp1k.toFixed(2)), /*#__PURE__*/React.createElement("td", null, t.probability != null ? fmtPct(t.probability) : '--'), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontSize: 12
+      }
+    }, fmtDate(t.date_entry)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        fontSize: 12
+      }
+    }, fmtDate(t.date_expiry)), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(Badge, {
+      v: t.status
+    })), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(Badge, {
+      v: t.result
+    })), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: t.income > 0 ? '#4ade80' : t.income < 0 ? '#f87171' : '#94a3b8'
+      },
+      className: "mono"
+    }, fmt$(t.income)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#475569',
+        fontSize: 12
+      }
+    }, t.comment));
+  })), /*#__PURE__*/React.createElement("tfoot", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      borderTop: '2px solid #334155'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    colSpan: 4,
+    style: {
+      color: '#64748b',
+      fontWeight: 600
+    }
+  }, "TOTAL"), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      fontWeight: 600
+    }
+  }, fmt$(totalCap)), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      color: '#60a5fa',
+      fontWeight: 600
+    }
+  }, fmt$(totalCredit)), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      color: totalIncome >= 0 ? '#4ade80' : '#f87171',
+      fontWeight: 700
+    }
+  }, fmt$(totalIncome)), /*#__PURE__*/React.createElement("td", null))))), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Text Report Preview"), /*#__PURE__*/React.createElement("pre", {
+    style: {
+      fontFamily: "'JetBrains Mono',monospace",
+      fontSize: 12,
+      color: '#94a3b8',
+      whiteSpace: 'pre-wrap',
+      lineHeight: 1.7
+    }
+  }, textReport))));
+}
+
+// --- Projections Tab ----------------------------------------------------------
+function Projections({
+  trades,
+  capital,
+  fx
+}) {
+  var _projData$, _projData$2, _projData$3, _projData$4, _projData$5, _projData$6;
+  // Historical baseline
+  const histData = useMemo(() => {
+    var _capital$ANE;
+    const closed = (trades || []).filter(t => t.status === 'Closed' || t.status === 'Expired');
+    const monthMap = {};
+    closed.forEach(t => {
+      var _t$date_expiry2;
+      const m = (_t$date_expiry2 = t.date_expiry) === null || _t$date_expiry2 === void 0 ? void 0 : _t$date_expiry2.slice(0, 7);
+      if (m) monthMap[m] = (monthMap[m] || 0) + (t.income || 0);
+    });
+    const months = Object.keys(monthMap).sort();
+    const totalIncomeUSD = Object.values(monthMap).reduce((s, v) => s + v, 0);
+    const deps = (capital === null || capital === void 0 || (_capital$ANE = capital.ANE) === null || _capital$ANE === void 0 ? void 0 : _capital$ANE.deposits) || [];
+    const totalGBP = deps.reduce((s, d) => s + (parseFloat(d.amount_gbp) || 0), 0);
+    const totalUSD = totalGBP * fx;
+    const n = months.length || 1;
+    const avgMonthlyUSD = totalIncomeUSD / n;
+    const avgMonthlyROC = totalUSD > 0 ? avgMonthlyUSD / totalUSD * 100 : 2.5;
+    return {
+      avgMonthlyROC: Math.max(0.01, Math.round(avgMonthlyROC * 100) / 100),
+      avgMonthlyUSD: Math.round(avgMonthlyUSD),
+      avgMonthlyGBP: Math.round(avgMonthlyUSD / fx),
+      totalIncomeUSD,
+      totalGBP,
+      monthsActive: n
+    };
+  }, [trades, capital, fx]);
+  const initCapGBP = useMemo(() => {
+    var _capital$ANE2;
+    const deps = (capital === null || capital === void 0 || (_capital$ANE2 = capital.ANE) === null || _capital$ANE2 === void 0 ? void 0 : _capital$ANE2.deposits) || [];
+    return deps.reduce((s, d) => s + (parseFloat(d.amount_gbp) || 0), 0);
+  }, [capital]);
+
+  // Controls state
+  const [startCapStr, setStartCapStr] = useState('');
+  const [rocStr, setRocStr] = useState('');
+  const [compound, setCompound] = useState(true);
+  const [reinvestPct, setReinvestPct] = useState(100);
+  const [injections, setInjections] = useState([]);
+  const [newInjMonth, setNewInjMonth] = useState('');
+  const [newInjAmt, setNewInjAmt] = useState('');
+
+  // Sync defaults once on mount
+  const defaultsSet = useRef(false);
+  useEffect(() => {
+    if (!defaultsSet.current && initCapGBP > 0) {
+      setStartCapStr(Math.round(initCapGBP).toString());
+      setRocStr(histData.avgMonthlyROC.toFixed(2));
+      defaultsSet.current = true;
+    }
+  }, [initCapGBP, histData]);
+  const effectiveCap = parseFloat(startCapStr) || initCapGBP || 10000;
+  const effectiveROC = parseFloat(rocStr) || histData.avgMonthlyROC || 2.5;
+
+  // Projection maths
+  const projData = useMemo(() => {
+    const rows = [];
+    let capitalGBP = effectiveCap;
+    let cumIncomeGBP = 0;
+    const now = new Date();
+    for (let i = 1; i <= 36; i++) {
+      const injAmt = injections.filter(inj => parseInt(inj.month) === i).reduce((s, inj) => s + (parseFloat(inj.amount) || 0), 0);
+      capitalGBP += injAmt;
+      const monthlyGBP = capitalGBP * (effectiveROC / 100);
+      cumIncomeGBP += monthlyGBP;
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const label = d.toLocaleDateString('en-GB', {
+        month: 'short',
+        year: '2-digit'
+      });
+      const capAfter = compound ? capitalGBP + monthlyGBP * (reinvestPct / 100) : capitalGBP;
+      rows.push({
+        i,
+        label,
+        capitalGBP: Math.round(capitalGBP),
+        injAmt,
+        monthlyGBP: Math.round(monthlyGBP),
+        cumIncomeGBP: Math.round(cumIncomeGBP),
+        capitalAfterGBP: Math.round(capAfter)
+      });
+      if (compound) capitalGBP += monthlyGBP * (reinvestPct / 100);
+    }
+    return rows;
+  }, [effectiveCap, effectiveROC, compound, reinvestPct, injections]);
+
+  // Chart
+  const chartRef = useRef(null);
+  useEffect(() => {
+    if (!chartRef.current || !projData.length) return;
+    const ctx = chartRef.current.getContext('2d');
+    const ch = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: projData.map(r => r.label),
+        datasets: [{
+          label: 'Capital Base',
+          data: projData.map(r => compound ? r.capitalAfterGBP : r.capitalGBP),
+          borderColor: '#60a5fa',
+          backgroundColor: 'rgba(96,165,250,0.07)',
+          tension: 0.35,
+          fill: true,
+          pointRadius: 2,
+          borderWidth: 2,
+          yAxisID: 'y1'
+        }, {
+          label: 'Cumulative Income',
+          data: projData.map(r => r.cumIncomeGBP),
+          borderColor: '#4ade80',
+          backgroundColor: 'rgba(74,222,128,0.04)',
+          tension: 0.35,
+          fill: false,
+          pointRadius: 2,
+          borderWidth: 2,
+          yAxisID: 'y1'
+        }, {
+          label: 'Monthly Income',
+          data: projData.map(r => r.monthlyGBP),
+          borderColor: '#fbbf24',
+          backgroundColor: 'rgba(251,191,36,0.1)',
+          tension: 0.35,
+          fill: false,
+          pointRadius: 2,
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          yAxisID: 'y2'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#94a3b8',
+              font: {
+                size: 12
+              },
+              padding: 20
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#e2e8f0',
+            bodyColor: '#94a3b8',
+            callbacks: {
+              label: c => ' ' + c.dataset.label + ': \xa3' + Math.round(c.parsed.y).toLocaleString('en-GB')
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#64748b',
+              font: {
+                size: 10
+              },
+              maxRotation: 45
+            },
+            grid: {
+              color: '#1e293b'
+            }
+          },
+          y1: {
+            type: 'linear',
+            position: 'left',
+            ticks: {
+              color: '#94a3b8',
+              font: {
+                size: 10
+              },
+              callback: v => '\xa3' + Math.round(v / 1000) + 'k'
+            },
+            grid: {
+              color: '#1e293b'
+            }
+          },
+          y2: {
+            type: 'linear',
+            position: 'right',
+            ticks: {
+              color: '#fbbf24',
+              font: {
+                size: 10
+              },
+              callback: v => '\xa3' + Math.round(v).toLocaleString('en-GB')
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    });
+    return () => ch.destroy();
+  }, [projData, compound]);
+
+  // Summary
+  const yr1 = ((_projData$ = projData[11]) === null || _projData$ === void 0 ? void 0 : _projData$.cumIncomeGBP) || 0;
+  const yr2 = ((_projData$2 = projData[23]) === null || _projData$2 === void 0 ? void 0 : _projData$2.cumIncomeGBP) || 0;
+  const yr3 = ((_projData$3 = projData[35]) === null || _projData$3 === void 0 ? void 0 : _projData$3.cumIncomeGBP) || 0;
+  const mthAt36 = ((_projData$4 = projData[35]) === null || _projData$4 === void 0 ? void 0 : _projData$4.monthlyGBP) || 0;
+  const capFinal = compound ? (_projData$5 = projData[35]) === null || _projData$5 === void 0 ? void 0 : _projData$5.capitalAfterGBP : ((_projData$6 = projData[35]) === null || _projData$6 === void 0 ? void 0 : _projData$6.capitalGBP) || 0;
+  const addInj = () => {
+    const m = parseInt(newInjMonth),
+      a = parseFloat(newInjAmt);
+    if (!m || !a || m < 1 || m > 36) return;
+    setInjections(prev => [...prev, {
+      id: Date.now(),
+      month: m,
+      amount: a
+    }].sort((x, y) => x.month - y.month));
+    setNewInjMonth('');
+    setNewInjAmt('');
+  };
+  const removeInj = id => setInjections(prev => prev.filter(x => x.id !== id));
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 24
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 18,
+      color: '#e2e8f0',
+      marginBottom: 4
+    }
+  }, "36-Month Forward Projection"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#64748b'
+    }
+  }, "Based on ", histData.monthsActive, " month", histData.monthsActive !== 1 ? 's' : '', " of live data. Historical avg monthly income:", ' ', /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#94a3b8',
+      fontFamily: 'monospace'
+    }
+  }, "\\xa3", histData.avgMonthlyGBP.toLocaleString()), ' ', "(", histData.avgMonthlyROC.toFixed(2), "% on deployed capital).")), /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Projection Parameters"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: compound ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr',
+      gap: 16,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Starting Capital (\\xa3 GBP)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: startCapStr,
+    onChange: e => setStartCapStr(e.target.value),
+    placeholder: Math.round(initCapGBP).toString(),
+    style: {
+      fontFamily: 'monospace'
+    }
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Monthly Return %"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: rocStr,
+    onChange: e => setRocStr(e.target.value),
+    step: "0.1",
+    style: {
+      fontFamily: 'monospace'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginTop: 3
+    }
+  }, "Historical avg: ", histData.avgMonthlyROC.toFixed(2), "%")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Compound Returns"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      marginTop: 4
+    }
+  }, [{
+    v: true,
+    l: 'Reinvest'
+  }, {
+    v: false,
+    l: 'Withdraw'
+  }].map(o => /*#__PURE__*/React.createElement("button", {
+    key: o.l,
+    onClick: () => setCompound(o.v),
+    style: {
+      flex: 1,
+      padding: '7px 0',
+      fontSize: 12,
+      borderRadius: 6,
+      border: '1px solid',
+      borderColor: compound === o.v ? '#3b82f6' : '#334155',
+      background: compound === o.v ? 'rgba(59,130,246,0.15)' : 'transparent',
+      color: compound === o.v ? '#60a5fa' : '#64748b',
+      cursor: 'pointer'
+    }
+  }, o.l)))), compound && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      display: 'block',
+      marginBottom: 4
+    }
+  }, "Reinvest Rate (%)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: reinvestPct,
+    onChange: e => setReinvestPct(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))),
+    min: "0",
+    max: "100",
+    step: "5",
+    style: {
+      fontFamily: 'monospace'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginTop: 3
+    }
+  }, reinvestPct, "% of income added back"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: '1px solid #1e293b',
+      paddingTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748b',
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em',
+      marginBottom: 10
+    }
+  }, "Planned Capital Injections"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      alignItems: 'flex-end',
+      marginBottom: 10,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: '0 0 120px'
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      display: 'block',
+      marginBottom: 3
+    }
+  }, "Month (1-36)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: newInjMonth,
+    onChange: e => setNewInjMonth(e.target.value),
+    min: "1",
+    max: "36",
+    placeholder: "e.g. 6",
+    style: {
+      fontFamily: 'monospace'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: '0 0 200px'
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 11,
+      color: '#475569',
+      display: 'block',
+      marginBottom: 3
+    }
+  }, "Amount (\\xa3 GBP)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: newInjAmt,
+    onChange: e => setNewInjAmt(e.target.value),
+    placeholder: "e.g. 10000",
+    style: {
+      fontFamily: 'monospace'
+    }
+  })), /*#__PURE__*/React.createElement("button", {
+    className: "btn-primary",
+    onClick: addInj
+  }, "+ Add Injection")), injections.length > 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 6
+    }
+  }, injections.map(inj => /*#__PURE__*/React.createElement("div", {
+    key: inj.id,
+    style: {
+      background: 'rgba(59,130,246,0.12)',
+      border: '1px solid #1d4ed8',
+      borderRadius: 6,
+      padding: '4px 10px',
+      fontSize: 12,
+      color: '#93c5fd',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8
+    }
+  }, "Month ", inj.month, ": +\\xa3", parseFloat(inj.amount).toLocaleString(), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeInj(inj.id),
+    style: {
+      background: 'none',
+      border: 'none',
+      color: '#64748b',
+      cursor: 'pointer',
+      fontSize: 15,
+      lineHeight: 1,
+      padding: '0 2px'
+    }
+  }, "\xD7")))) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#334155',
+      fontStyle: 'italic'
+    }
+  }, "No injections planned. Add capital deployments above to model future lump-sum additions."))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(5,1fr)',
+      gap: 12,
+      marginBottom: 16
+    }
+  }, [{
+    label: 'Year 1 Income',
+    val: '\xa3' + Math.round(yr1).toLocaleString(),
+    color: '#4ade80',
+    sub: 'cumulative at month 12'
+  }, {
+    label: 'Year 2 Income',
+    val: '\xa3' + Math.round(yr2).toLocaleString(),
+    color: '#34d399',
+    sub: 'cumulative at month 24'
+  }, {
+    label: 'Year 3 Income',
+    val: '\xa3' + Math.round(yr3).toLocaleString(),
+    color: '#10b981',
+    sub: 'cumulative at month 36'
+  }, {
+    label: 'Monthly at Yr 3',
+    val: '\xa3' + Math.round(mthAt36).toLocaleString(),
+    color: '#fbbf24',
+    sub: 'run rate, month 36'
+  }, {
+    label: compound ? 'Capital at 36M' : 'Total Income',
+    val: '\xa3' + Math.round(compound ? capFinal : yr3).toLocaleString(),
+    color: '#a78bfa',
+    sub: compound ? 'inc. compounded growth' : 'sum of all income'
+  }].map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.label,
+    className: "card-sm",
+    style: {
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748b',
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
+      marginBottom: 6
+    }
+  }, s.label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'monospace',
+      fontWeight: 700,
+      fontSize: 17,
+      color: s.color
+    }
+  }, s.val), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      marginTop: 3
+    }
+  }, s.sub)))), /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header",
+    style: {
+      marginBottom: 16
+    }
+  }, "36-Month Projection Chart"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative',
+      height: 400
+    }
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: chartRef
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      fontSize: 10,
+      color: '#334155',
+      textAlign: 'center'
+    }
+  }, "Dashed yellow line = monthly income (right axis). Blue + green lines = capital base and cumulative income (left axis).")), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-header"
+  }, "Month-by-Month Projection Data"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+    style: {
+      width: 60
+    }
+  }, "Mth"), /*#__PURE__*/React.createElement("th", null, "Date"), /*#__PURE__*/React.createElement("th", null, "Capital Base"), /*#__PURE__*/React.createElement("th", null, "Injection"), /*#__PURE__*/React.createElement("th", null, "Monthly Income"), /*#__PURE__*/React.createElement("th", null, "Ann. Rate"), /*#__PURE__*/React.createElement("th", null, "Cumulative"), compound && /*#__PURE__*/React.createElement("th", null, "Capital After"))), /*#__PURE__*/React.createElement("tbody", null, projData.map(r => {
+    const isYrEnd = r.i % 12 === 0;
+    const yrNum = r.i / 12;
+    return /*#__PURE__*/React.createElement("tr", {
+      key: r.i,
+      style: {
+        background: isYrEnd ? 'rgba(59,130,246,0.07)' : r.i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
+        borderBottom: isYrEnd ? '2px solid rgba(59,130,246,0.3)' : undefined
+      }
+    }, /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'monospace',
+        color: isYrEnd ? '#60a5fa' : '#64748b',
+        fontWeight: isYrEnd ? 700 : 400
+      }
+    }, r.i, isYrEnd ? ' \u2022 Y' + yrNum : ''), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: '#94a3b8',
+        fontSize: 12
+      }
+    }, r.label), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'monospace',
+        color: '#e2e8f0'
+      }
+    }, "\\xa3", r.capitalGBP.toLocaleString()), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'monospace',
+        color: r.injAmt > 0 ? '#60a5fa' : '#1e293b'
+      }
+    }, r.injAmt > 0 ? '+\xa3' + r.injAmt.toLocaleString() : '--'), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'monospace',
+        color: '#4ade80'
+      }
+    }, "\\xa3", r.monthlyGBP.toLocaleString()), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'monospace',
+        color: '#34d399'
+      }
+    }, "\\xa3", (r.monthlyGBP * 12).toLocaleString()), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'monospace',
+        color: '#fbbf24',
+        fontWeight: isYrEnd ? 700 : 400
+      }
+    }, "\\xa3", r.cumIncomeGBP.toLocaleString()), compound && /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'monospace',
+        color: '#a78bfa',
+        fontWeight: isYrEnd ? 700 : 400
+      }
+    }, "\\xa3", r.capitalAfterGBP.toLocaleString()));
+  }))))));
+}
+
+// --- Main App -----------------------------------------------------------------
+const TABS = [{
+  id: 'dashboard',
+  label: '📊 Dashboard'
+}, {
+  id: 'trades',
+  label: '📝 Trade Log'
+}, {
+  id: 'sweet',
+  label: '🎯 Sweet Spot'
+}, {
+  id: 'capital',
+  label: '💰 Capital'
+}, {
+  id: 'analytics',
+  label: '📈 Analytics'
+}, {
+  id: 'report',
+  label: '📋 Report'
+}, {
+  id: 'projections',
+  label: '🔭 Projections'
+}];
+function App() {
+  const [tab, setTab] = useState('dashboard');
+  const [trades, setTrades] = useState(SEED_TRADES);
+  const [capital, setCapital] = useState(SEED_CAPITAL);
+  const [stocks] = useState(SEED_STOCKS);
+  const [fx, setFx] = useState(DEFAULT_FX);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: '100vh'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#020817',
+      borderBottom: '1px solid #1e293b',
+      padding: '0 24px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      height: 56
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      background: 'linear-gradient(135deg,#1d4ed8,#7c3aed)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 16
+    }
+  }, "\uD83D\uDCCA"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 15,
+      letterSpacing: '-0.01em'
+    }
+  }, "Aspire Options"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#475569',
+      letterSpacing: '0.05em',
+      textTransform: 'uppercase'
+    }
+  }, "Selling Puts Dashboard"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, "\xA3/$"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: fx,
+    onChange: e => setFx(parseFloat(e.target.value) || DEFAULT_FX),
+    step: "0.001",
+    style: {
+      width: 70,
+      padding: '3px 7px',
+      fontSize: 12,
+      background: '#1e293b',
+      border: '1px solid #334155',
+      borderRadius: 4,
+      color: '#e2e8f0',
+      textAlign: 'center'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#475569'
+    }
+  }, "FX rate")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#475569',
+      fontFamily: 'monospace'
+    }
+  }, new Date().toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#020817',
+      borderBottom: '1px solid #1e293b',
+      padding: '0 24px',
+      display: 'flex',
+      gap: 4
+    }
+  }, TABS.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => setTab(t.id),
+    className: tab === t.id ? 'tab-active' : 'tab-inactive',
+    style: {
+      padding: '10px 16px',
+      border: 'none',
+      cursor: 'pointer',
+      fontSize: 13,
+      fontWeight: tab === t.id ? 600 : 400,
+      borderRadius: '0 0 0 0',
+      transition: 'all 0.15s',
+      borderBottom: tab === t.id ? '2px solid #3b82f6' : '2px solid transparent'
+    }
+  }, t.label))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 1400,
+      margin: '0 auto'
+    }
+  }, tab === 'dashboard' && /*#__PURE__*/React.createElement(Dashboard, {
+    trades: trades,
+    capital: capital,
+    fx: fx
+  }), tab === 'trades' && /*#__PURE__*/React.createElement(TradeLog, {
+    trades: trades,
+    setTrades: setTrades,
+    stocks: stocks,
+    fx: fx
+  }), tab === 'sweet' && /*#__PURE__*/React.createElement(SweetSpot, {
+    trades: trades,
+    stocks: stocks
+  }), tab === 'capital' && /*#__PURE__*/React.createElement(Capital, {
+    trades: trades,
+    capital: capital,
+    setCapital: setCapital,
+    fx: fx
+  }), tab === 'analytics' && /*#__PURE__*/React.createElement(Analytics, {
+    trades: trades,
+    stocks: stocks,
+    fx: fx
+  }), tab === 'report' && /*#__PURE__*/React.createElement(Report, {
+    trades: trades,
+    fx: fx
+  }), tab === 'projections' && /*#__PURE__*/React.createElement(Projections, {
+    trades: trades,
+    capital: capital,
+    fx: fx
+  })));
+}
+try {
+  ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+  document.getElementById('loading').style.display = 'none';
+} catch (e) {
+  document.getElementById('load-error').style.display = 'block';
+  document.getElementById('load-error').textContent = 'Error: ' + e.message;
+}
+
+</script>
+</body>
+</html>
