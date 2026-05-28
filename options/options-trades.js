@@ -1401,5 +1401,25 @@ window.OPTIONS_TRADES = [
   income: 0,
   comment: 'New position — adds to #70'
 }
+// -- MAY 27 --
+, {
+  id: 74,
+  entity: 'ANE',
+  date_entry: '2026-05-27',
+  date_expiry: '2026-06-05',
+  ticker: 'META',
+  contracts: 4,
+  price_entry: null,
+  strike: 595,
+  capital: 238000,
+  credit_pc: 5.18,
+  total_credit: 2072,
+  probability: null,
+  iv: null,
+  status: 'Open',
+  result: null,
+  income: 0,
+  comment: 'New position'
+}
 // -- APPEND NEW TRADES BELOW THIS LINE --
 ];
