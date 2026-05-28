@@ -20,7 +20,7 @@
 
 window.OPTIONS_CAPITAL = {
   ANE: {
-    capital_gbp: 425000,
+    capital_gbp: 525000,
     margin_multiplier: 3,
     buffer_pct: 0.32,
     label: 'Aspire North East Ltd',
@@ -58,6 +58,11 @@ window.OPTIONS_CAPITAL = {
     }, {
       id: 7,
       date: '2026-05-26',
+      amount_gbp: 100000,
+      note: 'Top-up'
+    }, {
+      id: 8,
+      date: '2026-05-27',
       amount_gbp: 100000,
       note: 'Top-up'
     }]
