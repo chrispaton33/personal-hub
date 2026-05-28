@@ -4726,7 +4726,32 @@ function App() {
       alignItems: 'center',
       gap: 12
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("a", {
+    href: 'https://personal-hub-amm.pages.dev/',
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      color: '#64748b',
+      textDecoration: 'none',
+      fontSize: 12,
+      fontWeight: 500,
+      padding: '4px 8px',
+      borderRadius: 5,
+      border: '1px solid #1e293b',
+      background: '#0f172a',
+      transition: 'all 0.15s',
+      whiteSpace: 'nowrap'
+    },
+    onMouseEnter: e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = '#334155'; },
+    onMouseLeave: e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#1e293b'; }
+  }, "\u2190 Hub"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 1,
+      height: 24,
+      background: '#1e293b'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       width: 32,
       height: 32,
@@ -4787,7 +4812,26 @@ function App() {
       fontSize: 11,
       color: '#475569'
     }
-  }, "FX rate")), /*#__PURE__*/React.createElement("div", {
+  }, "FX rate")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => { ['optionsTracker_trades','optionsTracker_capital','optionsTracker_fx','optionsTracker_lastModified'].forEach(k => localStorage.removeItem(k)); window.location.reload(); },
+    title: 'Clear cache and reload latest data',
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+      background: '#0f172a',
+      border: '1px solid #1e293b',
+      borderRadius: 5,
+      color: '#64748b',
+      fontSize: 12,
+      fontWeight: 500,
+      padding: '4px 9px',
+      cursor: 'pointer',
+      transition: 'all 0.15s'
+    },
+    onMouseEnter: e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = '#334155'; },
+    onMouseLeave: e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#1e293b'; }
+  }, "↺ Refresh"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: '#475569',
