@@ -1,4 +1,5 @@
 # Pretty URLs (optional)
-/cash-tracker      /cash-tracker/index.html  200
-/options           /options/index.html       200
-/wealth-growth     /wealth-growth/index.html 200
+/cash-tracker      /cash-tracker/index.html      200
+/options           /options/index.html           200
+/wealth-growth     /wealth-growth/index.html     200
+/scenario-compare  /scenario-compare/index.html  200

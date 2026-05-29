@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acquisition Scenario Comparison</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8fa; --surface:#ffffff; --border:#dde1e8;
+  --paper:#0f172a; --muted:#5a6478;
+  --green:#16a34a; --gold:#c9a227; --blue:#2563eb; --red:#dc2626; --purple:#7c3aed;
+  --accent:#3dd68c;
+  /* Per-scenario tints */
+  --sA:#16a34a; --sA-bg:#dcfce7;
+  --sB:#c9a227; --sB-bg:#fef3c7;
+  --sC:#2563eb; --sC-bg:#dbeafe;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);font-family:'Jost',sans-serif;color:var(--paper);min-height:100vh;padding:1.5rem 1rem}
+.page{max-width:1100px;margin:0 auto}
+
+/* HEADER */
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.6rem;padding-bottom:1.2rem;border-bottom:1px solid var(--border)}
+.eyebrow{font-size:0.62rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--green);margin-bottom:0.35rem}
+h1{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;line-height:1.1}
+h1 em{font-style:italic;color:var(--gold)}
+.hdr-btns{display:flex;flex-direction:column;gap:0.4rem;padding-top:0.5rem;flex-shrink:0}
+.hdr-btns button{border:none;border-radius:6px;padding:0.45rem 0.9rem;font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;font-family:Jost,sans-serif;white-space:nowrap}
+.btn-primary{background:#3dd68c;color:#000}
+.btn-secondary{background:transparent;color:#5a6478;border:1px solid #dde1e8 !important;font-weight:500 !important}
+
+/* TABS */
+.tabs{display:flex;gap:0;margin-bottom:1.2rem;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.tab{flex:1;padding:0.55rem 0.3rem;font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:'Jost',sans-serif;transition:all 0.2s;white-space:nowrap}
+.tab.active{background:var(--green);color:#000;font-weight:600}
+.tab:not(:last-child){border-right:1px solid var(--border)}
+.panel{display:none}.panel.active{display:block}
+
+/* SCENARIO HEADER STRIP */
+.scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;margin-bottom:1.2rem}
+@media(max-width:760px){.scenarios{grid-template-columns:1fr}}
+.scen{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1rem;position:relative}
+.scen.a{border-top:3px solid var(--sA)} .scen.b{border-top:3px solid var(--sB)} .scen.c{border-top:3px solid var(--sC)}
+.scen-name{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;margin-bottom:0.2rem}
+.scen-name input{background:transparent;border:none;font:inherit;color:inherit;width:100%;outline:none}
+.scen-name input:focus{border-bottom:1px dashed var(--border)}
+.scen-sub{font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.7rem}
+.scen-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:0.4rem}
+.scen-kpi{background:#f7f8fa;border-radius:6px;padding:0.5rem 0.6rem}
+.scen-kpi .l{font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
+.scen-kpi .v{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;line-height:1.1}
+
+/* WINNER BADGE */
+.winner-badge{position:absolute;top:-9px;right:10px;background:var(--gold);color:#000;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:4px;font-weight:700}
+
+/* CHART */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin-bottom:1rem}
+.chart-title{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.8rem}
+.chart-legend{display:flex;gap:1rem;margin-bottom:0.8rem;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:0.35rem;font-size:0.62rem;color:var(--muted)}
+.leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.bar-wrap{display:flex;align-items:flex-end;gap:2px;height:220px;overflow:hidden}
+.bcol{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;min-width:0}
+.binner{flex:1;display:flex;align-items:flex-end;width:100%;gap:2px}
+.bseg{border-radius:2px 2px 0 0;transition:height 0.4s ease;min-height:0;flex:1}
+.bylbl{font-size:0.55rem;color:#6b7280;margin-top:3px;white-space:nowrap}
+.xlabel{font-size:0.6rem;color:#6b7280;text-align:center;margin-top:3px}
+
+/* CONTROLS */
+.controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;margin-bottom:1.2rem}
+@media(max-width:480px){.controls-grid{grid-template-columns:1fr}}
+.ctrl-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem}
+.ctrl-title{font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:0.8rem}
+.srow{margin-bottom:0.9rem}.srow:last-child{margin-bottom:0}
+.stop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.3rem}
+.slbl{font-size:0.68rem;color:var(--muted)}
+.sval{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:var(--paper)}
+.track{position:relative;height:3px;background:#e5e7eb;border-radius:2px}
+.fill{position:absolute;left:0;top:0;height:100%;border-radius:2px;pointer-events:none;transition:width 0.1s}
+input[type=range]{position:absolute;top:-8px;left:0;width:100%;height:19px;opacity:0;cursor:pointer;margin:0}
+
+/* SCENARIO CONFIG CARDS */
+.scen-config-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;margin-bottom:1.2rem}
+@media(max-width:900px){.scen-config-grid{grid-template-columns:1fr}}
+
+/* COMPARISON TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:0.7rem;min-width:760px}
+thead th{background:#f7f8fa;font-size:0.57rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:0.55rem 0.6rem;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+thead th:first-child{text-align:left}
+thead th.gA{color:var(--sA)} thead th.gB{color:var(--sB)} thead th.gC{color:var(--sC)}
+tbody td{padding:0.55rem 0.6rem;text-align:right;border-bottom:1px solid #eef0f4;font-family:'Cormorant Garamond',serif;font-size:0.92rem;color:#374151;white-space:nowrap}
+tbody td:first-child{text-align:left;font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--muted);font-weight:500}
+tbody tr.winner-A td.cA{background:var(--sA-bg);font-weight:700}
+tbody tr.winner-B td.cB{background:var(--sB-bg);font-weight:700}
+tbody tr.winner-C td.cC{background:var(--sC-bg);font-weight:700}
+.col-divider{border-left:1px solid var(--border)}
+
+/* SUMMARY DELTA TABLE */
+.delta-row{font-size:0.68rem;color:var(--muted);padding:0.35rem 0.6rem}
+
+.note{font-size:0.62rem;color:#6b7280;text-align:center;margin-top:0.8rem;line-height:1.5}
+.note strong{color:var(--paper)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="eyebrow">Acquisition Strategy · 10-Year Comparison</div>
+    <h1>Which <em>Asset Type</em> Builds More Wealth?</h1>
+  </div>
+  <div class="hdr-btns">
+    <button class="btn-primary" onclick="saveSettings()">💾 Save</button>
+    <button class="btn-secondary" onclick="resetSettings()">Reset</button>
+  </div>
+</div>
+
+<!-- HEADLINE SCENARIO STRIP -->
+<div class="scenarios" id="scenStrip"></div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="sw('overview')">Year-by-Year</button>
+  <button class="tab" onclick="sw('scenarios')">Asset Profiles</button>
+  <button class="tab" onclick="sw('shared')">Shared Inputs</button>
+  <button class="tab" onclick="sw('chart')">Wealth Chart</button>
+</div>
+
+<!-- OVERVIEW (Year-by-year) -->
+<div class="panel active" id="panel-overview">
+  <div class="chart-card">
+    <div class="chart-title">Total Wealth at end of each Year · Highlighted cell = winner that year</div>
+    <div class="tbl-wrap"><table id="comparisonTable"></table></div>
+  </div>
+  <div class="note">
+    <strong>Total Wealth</strong> = Investment Capital + Existing Portfolio Equity + New Acquisitions Equity + Cash Reserve.
+    The existing 25-property portfolio is identical across all scenarios — the only thing that differs is which NEW asset type is being acquired with surplus cash.
+  </div>
+</div>
+
+<!-- SCENARIOS PANEL -->
+<div class="panel" id="panel-scenarios">
+  <div class="scen-config-grid" id="scenConfigGrid"></div>
+  <div class="note">Adjust the asset profile per scenario — cash cost (deposit + buying costs), monthly net cashflow, total asset value, and outstanding mortgage. Equity per unit = value − mortgage.</div>
+</div>
+
+<!-- SHARED INPUTS PANEL -->
+<div class="panel" id="panel-shared">
+  <div class="controls-grid" id="sharedGrid"></div>
+  <div class="note">These inputs apply to ALL scenarios. Only the asset-type profile differs between them.</div>
+</div>
+
+<!-- CHART PANEL -->
+<div class="panel" id="panel-chart">
+  <div class="chart-card">
+    <div class="chart-title">Total Wealth Growth · Monthly (£)</div>
+    <div class="chart-legend" id="chartLegend"></div>
+    <div class="bar-wrap" id="wealthChart"></div>
+    <div class="xlabel">Months 1–120</div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">New Acquisition Cashflow · Monthly (£)</div>
+    <div class="chart-legend" id="cfLegend"></div>
+    <div class="bar-wrap" id="cfChart"></div>
+    <div class="xlabel">Months 1–120</div>
+  </div>
+</div>
+
+<div class="note" style="margin-top:1.5rem">
+  Nominal terms · 24% corp tax on company profit · Drawings excluded from corp tax calc · Asset CF compounds with CPI · Asset value compounds with property growth rate
+</div>
+</div>
+
+<script>
+/* =====================================================
+   SHARED MODEL INPUTS — identical to wealth-growth model
+   ===================================================== */
+const SHARED = {
+  companyRevenue: 30000,
+  investmentCapital: 1500000,
+  tradingReturnPct: 2,
+  investmentGrowthPct: 10,
+  corpTaxRate: 24,
+  baseDrawings: 9000,
+  drawingsAnnualIncrease: 2000,
+  cpiPct: 2.3,
+  propertyValueIncreasePct: 2.0,
+  cashReserve: 0,
+};
+
+/* =====================================================
+   PER-SCENARIO ASSET PROFILES
+   - cost: cash outlay per acquisition (deposit + costs)
+   - cf: net monthly cashflow per unit at month-0 prices
+   - value: total asset value per unit (for equity calc)
+   - mortgage: outstanding mortgage per unit (stays fixed)
+   ===================================================== */
+// refinanceMonth = months after acquisition before refinance event (0 = no refi)
+// refinanceRelease = cash released back to deployable pool at refinance
+//   (also added to outstanding mortgage, so equity per unit drops by that amount)
+const SCENARIOS = [
+  { id:'A', name:'Supported Living', tint:'sA', cost:33000, cf:550, value:100000, mortgage:75000,  refinanceMonth:0,  refinanceRelease:0 },
+  { id:'B', name:'Turn Key SA',      tint:'sB', cost:56700, cf:850, value:127000, mortgage:82500,  refinanceMonth:36, refinanceRelease:14500 },
+  { id:'C', name:'Custom',           tint:'sC', cost:50000, cf:700, value:120000, mortgage:80000,  refinanceMonth:0,  refinanceRelease:0 },
+];
+
+/* =====================================================
+   EXISTING PORTFOLIO — identical to wealth-growth model
+   ===================================================== */
+const EXISTING_PORTFOLIO = [
+  { address: '5 Ninth Avenue, Newcastle', totalValue: 380000, mortgage: 285000, ownershipPct: 1.0 },
+  { address: '137 Rothbury Terrace, Newcastle', totalValue: 470000, mortgage: 352000, ownershipPct: 1.0 },
+  { address: '55 Cardigan Terrace, Newcastle', totalValue: 435000, mortgage: 326000, ownershipPct: 1.0 },
+  { address: '38 Cheltenham Terrace, Newcastle', totalValue: 435000, mortgage: 326000, ownershipPct: 1.0 },
+  { address: '92 Spencer Street, Newcastle', totalValue: 440000, mortgage: 312000, ownershipPct: 1.0 },
+  { address: '97 Spencer Street, Newcastle', totalValue: 495000, mortgage: 376000, ownershipPct: 1.0 },
+  { address: '103 Biddlestone Road, Newcastle', totalValue: 465000, mortgage: 315000, ownershipPct: 1.0 },
+  { address: '18 Ninth Avenue, Newcastle', totalValue: 495000, mortgage: 255805, ownershipPct: 1.0 },
+  { address: '352 Rectory Road, Gateshead', totalValue: 380000, mortgage: 285000, ownershipPct: 1.0 },
+  { address: '156 Dilston Road, Newcastle', totalValue: 355000, mortgage: 191436, ownershipPct: 1.0 },
+  { address: '21 Cheltenham Terrace, Newcastle', totalValue: 500000, mortgage: 267985, ownershipPct: 1.0 },
+  { address: '2 Ninth Avenue, Newcastle', totalValue: 495000, mortgage: 236013, ownershipPct: 1.0 },
+  { address: '24 & 24a Simonside Terrace, Newcastle', totalValue: 685000, mortgage: 345895, ownershipPct: 1.0 },
+  { address: '362 Rectory Road, Gateshead', totalValue: 380000, mortgage: 269000, ownershipPct: 1.0 },
+  { address: '262 Westgate Road, Newcastle (8 Flats)', totalValue: 1345000, mortgage: 679640, ownershipPct: 1.0 },
+  { address: '22 Bolinbroke Street, Newcastle', totalValue: 460000, mortgage: 210400, ownershipPct: 1.0 },
+  { address: '62 Wilton Street, Middlesbrough', totalValue: 500000, mortgage: 285000, ownershipPct: 1.0 },
+  { address: '72 Wilton Street, Middlesbrough', totalValue: 530000, mortgage: 285000, ownershipPct: 1.0 },
+  { address: '36 Ninth Avenue, Newcastle', totalValue: 490000, mortgage: 371399, ownershipPct: 1.0 },
+  { address: '127 Amington Road, Tamworth', totalValue: 390000, mortgage: 265781, ownershipPct: 0.25 },
+  { address: '226 Chillingham Road, Newcastle (6 Flats + Commercial)', totalValue: 1600000, mortgage: 1114682, ownershipPct: 0.5 },
+  { address: '226 Chillingham Road, Newcastle (3 Flats)', totalValue: 400000, mortgage: 170000, ownershipPct: 0.5 },
+  { address: '11 Carlton Street, Halifax', totalValue: 400000, mortgage: 274725, ownershipPct: 0.33 },
+  { address: "35 Albert Road, Middlesbrough (4 x HMOs + Commercial)", totalValue: 2600000, mortgage: 1644750, ownershipPct: 0.5 },
+  { address: '42 The Esplanade, Scarborough', totalValue: 2100000, mortgage: 1700000, ownershipPct: 0.25 }
+];
+const EP_START_VALUE  = EXISTING_PORTFOLIO.reduce((s,p)=> s + p.totalValue  * p.ownershipPct, 0);
+const EP_START_EQUITY = EXISTING_PORTFOLIO.reduce((s,p)=> s + (p.totalValue - p.mortgage) * p.ownershipPct, 0);
+
+/* =====================================================
+   FORMATTING
+   ===================================================== */
+function fmt(n,d=0){
+  if(n===undefined||isNaN(n))return'—';
+  const abs=Math.abs(n);
+  if(abs>=1000000) return (n<0?'-':'')+'£'+(Math.abs(n)/1000000).toFixed(2)+'m';
+  if(abs>=1000)    return (n<0?'-':'')+'£'+Math.round(Math.abs(n)).toLocaleString('en-GB');
+  return '£'+n.toFixed(d);
+}
+function fmts(n){return(n>=0?'+':'')+fmt(n)}
+function pct(v,mn,mx){return Math.max(0,Math.min(100,((v-mn)/(mx-mn))*100))}
+
+/* =====================================================
+   CORE MODEL — runs ONE scenario for 120 months
+   Same maths as wealth-growth/index.html
+   ===================================================== */
+function runScenario(scen){
+  const rows=[];
+  let investCap = SHARED.investmentCapital;
+  let cash = SHARED.cashReserve;
+  let properties = []; // {acquiredMonth, refinanced}
+  let cumulativeCashSpent = 0;
+  let cumulativeRefinanced = 0;
+
+  for(let m=1;m<=120;m++){
+    const yr = Math.ceil(m/12);
+    const monthlyDrawings = SHARED.baseDrawings + (yr-1) * SHARED.drawingsAnnualIncrease;
+
+    // Trading return (does NOT compound back into capital)
+    const tradingReturn = investCap * (SHARED.tradingReturnPct/100);
+
+    // Investment capital grows at S&P rate, compounded monthly
+    const monthlyCapGrowth = Math.pow(1 + SHARED.investmentGrowthPct/100, 1/12) - 1;
+    investCap = investCap * (1 + monthlyCapGrowth);
+
+    // Property cashflow with CPI uplift
+    let propCFTotal = properties.reduce((sum, p) => {
+      const yearsHeld = Math.floor((m - p.acquiredMonth) / 12);
+      return sum + scen.cf * Math.pow(1 + SHARED.cpiPct/100, yearsHeld);
+    }, 0);
+
+    const grossIncome = SHARED.companyRevenue + tradingReturn + propCFTotal;
+    const companyProfit = grossIncome - monthlyDrawings;
+    const corpTax = Math.max(0, companyProfit * (SHARED.corpTaxRate/100));
+    const netCompanyIncome = grossIncome - corpTax;
+    const surplus = netCompanyIncome - monthlyDrawings;
+    cash += surplus;
+
+    // REFINANCE EVENTS — process before acquisitions so released cash can redeploy
+    let refinancedThisMonth = 0;
+    if(scen.refinanceMonth > 0 && scen.refinanceRelease > 0){
+      properties.forEach(p => {
+        if(!p.refinanced && (m - p.acquiredMonth) >= scen.refinanceMonth){
+          p.refinanced = true;
+          cash += scen.refinanceRelease;
+          cumulativeRefinanced += scen.refinanceRelease;
+          refinancedThisMonth++;
+        }
+      });
+    }
+
+    // Acquire as many units as cash allows
+    let propsBought = 0;
+    while(cash >= scen.cost){
+      cash -= scen.cost;
+      cumulativeCashSpent += scen.cost;
+      properties.push({acquiredMonth: m, refinanced: false});
+      propsBought++;
+    }
+
+    // Recalc after buys for display
+    propCFTotal = properties.reduce((sum, p) => {
+      const yearsHeld = Math.floor((m - p.acquiredMonth) / 12);
+      return sum + scen.cf * Math.pow(1 + SHARED.cpiPct/100, yearsHeld);
+    }, 0);
+
+    // New acquisition equity — refinanced units carry higher mortgage
+    const newPropEquity = properties.reduce((sum, p) => {
+      const yearsHeld = (m - p.acquiredMonth) / 12;
+      const currentValue = scen.value * Math.pow(1 + SHARED.propertyValueIncreasePct/100, yearsHeld);
+      const effMortgage = p.refinanced ? scen.mortgage + scen.refinanceRelease : scen.mortgage;
+      return sum + (currentValue - effMortgage);
+    }, 0);
+    const newPropAssetValue = properties.reduce((sum, p) => {
+      const yearsHeld = (m - p.acquiredMonth) / 12;
+      return sum + scen.value * Math.pow(1 + SHARED.propertyValueIncreasePct/100, yearsHeld);
+    }, 0);
+
+    // Existing portfolio
+    const yearsElapsed = m / 12;
+    const growthFactor = Math.pow(1 + SHARED.propertyValueIncreasePct/100, yearsElapsed);
+    const existingEquity = EXISTING_PORTFOLIO.reduce((sum, p) => {
+      const myCurrentValue = p.totalValue * p.ownershipPct * growthFactor;
+      const myMortgage = p.mortgage * p.ownershipPct;
+      return sum + (myCurrentValue - myMortgage);
+    }, 0);
+    const existingAssetValue = EP_START_VALUE * growthFactor;
+
+    const totalEquity = newPropEquity + existingEquity;
+    const totalWealth = investCap + totalEquity + cash;
+
+    rows.push({
+      m, yr,
+      investCap: Math.round(investCap),
+      cash: Math.round(cash),
+      properties: properties.length,
+      propsBought,
+      refinancedThisMonth,
+      refinancedCount: properties.filter(p=>p.refinanced).length,
+      propCFTotal: Math.round(propCFTotal),
+      cumulativeCashSpent: Math.round(cumulativeCashSpent),
+      cumulativeRefinanced: Math.round(cumulativeRefinanced),
+      netInvested: Math.round(cumulativeCashSpent - cumulativeRefinanced),
+      grossIncome: Math.round(grossIncome),
+      surplus: Math.round(surplus),
+      monthlyDrawings: Math.round(monthlyDrawings),
+      newPropEquity: Math.round(newPropEquity),
+      newPropAssetValue: Math.round(newPropAssetValue),
+      existingEquity: Math.round(existingEquity),
+      existingAssetValue: Math.round(existingAssetValue),
+      totalWealth: Math.round(totalWealth),
+    });
+  }
+  return rows;
+}
+
+/* =====================================================
+   RUN ALL SCENARIOS + DETERMINE WINNERS
+   ===================================================== */
+function runAll(){
+  return SCENARIOS.map(s => ({scen: s, rows: runScenario(s)}));
+}
+
+/* =====================================================
+   RENDER: HEADLINE SCENARIO STRIP
+   ===================================================== */
+function renderScenStrip(results){
+  const yr10wealth = results.map(r => r.rows[119].totalWealth);
+  const maxWealth = Math.max(...yr10wealth);
+  const el = document.getElementById('scenStrip');
+  el.innerHTML = results.map((r,i) => {
+    const last = r.rows[119];
+    const isWinner = last.totalWealth === maxWealth;
+    const hasRefi = r.scen.refinanceMonth > 0 && r.scen.refinanceRelease > 0;
+    const refiTag = hasRefi
+      ? ` · <span style="color:var(--purple);font-weight:600">↻ Refi Mo${r.scen.refinanceMonth} releases ${fmt(r.scen.refinanceRelease)}</span>`
+      : '';
+    return `
+      <div class="scen ${r.scen.id.toLowerCase()}">
+        ${isWinner ? '<div class="winner-badge">★ Best Yr10</div>' : ''}
+        <div class="scen-name"><input type="text" value="${r.scen.name}" data-sid="${r.scen.id}" onchange="renameScen(this)"></div>
+        <div class="scen-sub">${fmt(r.scen.cost)} cash · ${fmt(r.scen.cf)}/mo · ${fmt(r.scen.value)} val${refiTag}</div>
+        <div class="scen-kpis">
+          <div class="scen-kpi"><div class="l">Total Wealth Yr10</div><div class="v" style="color:var(--${r.scen.tint})">${fmt(last.totalWealth)}</div></div>
+          <div class="scen-kpi"><div class="l">Units Acquired</div><div class="v">${last.properties}${hasRefi?` <span style="font-size:0.55rem;color:var(--purple);font-family:Jost,sans-serif">(${last.refinancedCount} refi'd)</span>`:''}</div></div>
+          <div class="scen-kpi"><div class="l">Yr10 CF</div><div class="v" style="color:var(--green)">${fmt(last.propCFTotal)}/mo</div></div>
+          <div class="scen-kpi"><div class="l">New Equity</div><div class="v" style="color:var(--gold)">${fmt(last.newPropEquity)}</div></div>
+          <div class="scen-kpi"><div class="l">Cash Deployed</div><div class="v">${fmt(last.cumulativeCashSpent)}</div></div>
+          <div class="scen-kpi"><div class="l">Net Invested</div><div class="v" style="color:var(--blue)">${fmt(last.netInvested)}</div></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renameScen(input){
+  const sid = input.dataset.sid;
+  const scen = SCENARIOS.find(s => s.id === sid);
+  if(scen){scen.name = input.value || scen.name; update(); }
+}
+
+/* =====================================================
+   RENDER: YEAR-BY-YEAR COMPARISON TABLE
+   ===================================================== */
+function renderComparisonTable(results){
+  const el = document.getElementById('comparisonTable');
+  el.innerHTML = `<thead><tr>
+    <th>Year</th>
+    <th class="gA">A · Units</th>
+    <th class="gA">A · Total Wealth</th>
+    <th class="gB col-divider">B · Units</th>
+    <th class="gB">B · Total Wealth</th>
+    <th class="gC col-divider">C · Units</th>
+    <th class="gC">C · Total Wealth</th>
+    <th class="col-divider">Spread (Max−Min)</th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  for(let yr=1; yr<=10; yr++){
+    const m = yr * 12 - 1; // month index for end of year
+    const yrEndRows = results.map(r => r.rows[m]);
+    const wealths = yrEndRows.map(r => r.totalWealth);
+    const maxW = Math.max(...wealths);
+    const minW = Math.min(...wealths);
+    const winnerIdx = wealths.indexOf(maxW);
+    const winnerLabel = ['A','B','C'][winnerIdx];
+    const tr = document.createElement('tr');
+    tr.className = `winner-${winnerLabel}`;
+    tr.innerHTML = `
+      <td>Year ${yr}</td>
+      <td class="cA">${yrEndRows[0].properties}</td>
+      <td class="cA">${fmt(yrEndRows[0].totalWealth)}</td>
+      <td class="cB col-divider">${yrEndRows[1].properties}</td>
+      <td class="cB">${fmt(yrEndRows[1].totalWealth)}</td>
+      <td class="cC col-divider">${yrEndRows[2].properties}</td>
+      <td class="cC">${fmt(yrEndRows[2].totalWealth)}</td>
+      <td class="col-divider" style="color:var(--muted)">${fmt(maxW - minW)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+  el.appendChild(tbody);
+}
+
+/* =====================================================
+   RENDER: SCENARIO CONFIG CARDS (Asset Profiles tab)
+   ===================================================== */
+const SCEN_FIELDS = [
+  {key:'cost',             label:'Cash Cost',          min:10000, max:200000, step:100,  fmt:v=>fmt(v)},
+  {key:'cf',               label:'Net Monthly CF',     min:100,   max:3000,   step:50,   fmt:v=>fmt(v)+'/mo'},
+  {key:'value',            label:'Asset Value',        min:50000, max:500000, step:1000, fmt:v=>fmt(v)},
+  {key:'mortgage',         label:'Mortgage',           min:0,     max:400000, step:500,  fmt:v=>fmt(v)},
+  {key:'refinanceMonth',   label:'Refinance @ Month',  min:0,     max:60,     step:1,    fmt:v=>v===0?'Off':'Mo '+v},
+  {key:'refinanceRelease', label:'Cash Released',      min:0,     max:50000,  step:500,  fmt:v=>v===0?'—':fmt(v)},
+];
+
+function renderScenConfig(){
+  const grid = document.getElementById('scenConfigGrid');
+  grid.innerHTML = '';
+  SCENARIOS.forEach(scen => {
+    const block = document.createElement('div');
+    block.className = 'ctrl-block';
+    block.style.borderTop = `3px solid var(--${scen.tint})`;
+    block.innerHTML = `<div class="ctrl-title" style="color:var(--${scen.tint})">${scen.name}</div>`;
+    SCEN_FIELDS.forEach(cfg => {
+      const val = scen[cfg.key];
+      const p = pct(val, cfg.min, cfg.max);
+      const row = document.createElement('div');
+      row.className = 'srow';
+      const uid = `${scen.id}_${cfg.key}`;
+      row.innerHTML = `
+        <div class="stop">
+          <span class="slbl">${cfg.label}</span>
+          <span class="sval" id="sv_${uid}">${cfg.fmt(val)}</span>
+        </div>
+        <div class="track">
+          <div class="fill" id="sf_${uid}" style="width:${p}%;background:var(--${scen.tint})"></div>
+          <input type="range" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${val}" id="si_${uid}">
+        </div>`;
+      block.appendChild(row);
+      setTimeout(() => {
+        document.getElementById(`si_${uid}`).addEventListener('input', e => {
+          scen[cfg.key] = Number(e.target.value);
+          document.getElementById(`sv_${uid}`).textContent = cfg.fmt(scen[cfg.key]);
+          document.getElementById(`sf_${uid}`).style.width = pct(scen[cfg.key], cfg.min, cfg.max) + '%';
+          update();
+        });
+      }, 0);
+    });
+    // Derived equity per unit
+    const eq = scen.value - scen.mortgage;
+    const eqRow = document.createElement('div');
+    eqRow.style.cssText='margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed var(--border);font-size:0.7rem;color:var(--muted);display:flex;justify-content:space-between';
+    eqRow.innerHTML = `<span>Equity per unit</span><span style="font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:var(--paper)" id="eq_${scen.id}">${fmt(eq)}</span>`;
+    block.appendChild(eqRow);
+    grid.appendChild(block);
+  });
+}
+
+/* =====================================================
+   RENDER: SHARED INPUT SLIDERS
+   ===================================================== */
+const SHARED_GROUPS = [
+  {
+    title:'Company & Trading', color:'#3dd68c',
+    sliders:[
+      {key:'companyRevenue',label:'Company Revenue',min:5000,max:100000,step:1000,fmt:v=>fmt(v)+'/mo'},
+      {key:'investmentCapital',label:'Investment Capital',min:100000,max:5000000,step:50000,fmt:fmt},
+      {key:'tradingReturnPct',label:'Trading Return (Monthly)',min:0,max:10,step:0.5,fmt:v=>v.toFixed(1)+'%/mo'},
+      {key:'investmentGrowthPct',label:'Investment Capital Growth (S&P)',min:0,max:20,step:0.5,fmt:v=>v.toFixed(1)+'%/yr'},
+    ]
+  },
+  {
+    title:'Tax & Drawings', color:'#f0b429',
+    sliders:[
+      {key:'corpTaxRate',label:'Corporation Tax',min:0,max:30,step:1,fmt:v=>v+'%'},
+      {key:'baseDrawings',label:'Base Drawings',min:1000,max:30000,step:500,fmt:v=>fmt(v)+'/mo'},
+      {key:'drawingsAnnualIncrease',label:'Drawings Increase',min:0,max:10000,step:500,fmt:v=>'+'+fmt(v)+'/mo per yr'},
+    ]
+  },
+  {
+    title:'Macro Growth', color:'#60a5fa',
+    sliders:[
+      {key:'cpiPct',label:'CPI Rent Uplift',min:0,max:10,step:0.1,fmt:v=>v.toFixed(1)+'%/yr'},
+      {key:'propertyValueIncreasePct',label:'Property Value Increase',min:0,max:15,step:0.5,fmt:v=>v.toFixed(1)+'%/yr'},
+    ]
+  },
+];
+
+function renderShared(){
+  const grid = document.getElementById('sharedGrid');
+  grid.innerHTML = '';
+  SHARED_GROUPS.forEach(grp => {
+    const block = document.createElement('div');
+    block.className = 'ctrl-block';
+    block.innerHTML = `<div class="ctrl-title" style="color:${grp.color}">${grp.title}</div>`;
+    grp.sliders.forEach(cfg => {
+      const p = pct(SHARED[cfg.key], cfg.min, cfg.max);
+      const row = document.createElement('div');
+      row.className = 'srow';
+      row.innerHTML = `
+        <div class="stop">
+          <span class="slbl">${cfg.label}</span>
+          <span class="sval" id="sv_${cfg.key}">${cfg.fmt(SHARED[cfg.key])}</span>
+        </div>
+        <div class="track">
+          <div class="fill" id="sf_${cfg.key}" style="width:${p}%;background:${grp.color}"></div>
+          <input type="range" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${SHARED[cfg.key]}" id="si_${cfg.key}">
+        </div>`;
+      block.appendChild(row);
+      setTimeout(() => {
+        document.getElementById(`si_${cfg.key}`).addEventListener('input', e => {
+          SHARED[cfg.key] = Number(e.target.value);
+          document.getElementById(`sv_${cfg.key}`).textContent = cfg.fmt(SHARED[cfg.key]);
+          document.getElementById(`sf_${cfg.key}`).style.width = pct(SHARED[cfg.key], cfg.min, cfg.max) + '%';
+          update();
+        });
+      }, 0);
+    });
+    grid.appendChild(block);
+  });
+}
+
+/* =====================================================
+   RENDER: WEALTH CHART (stacked bars per scenario)
+   ===================================================== */
+function renderWealthChart(results){
+  const el = document.getElementById('wealthChart');
+  el.innerHTML = '';
+  const stride = 2;
+  const allMonths = results[0].rows.filter((_,i)=>i%stride===0);
+  const maxW = Math.max(...results.flatMap(r => r.rows.map(x => x.totalWealth)));
+
+  // Legend
+  document.getElementById('chartLegend').innerHTML = results.map(r =>
+    `<div class="leg"><div class="leg-dot" style="background:var(--${r.scen.tint})"></div>${r.scen.name}</div>`
+  ).join('');
+
+  allMonths.forEach((_, idx) => {
+    const realIdx = idx * stride;
+    const col = document.createElement('div');
+    col.className = 'bcol';
+    const inner = document.createElement('div');
+    inner.className = 'binner';
+    results.forEach(r => {
+      const wealth = r.rows[realIdx].totalWealth;
+      const h = maxW > 0 ? (wealth / maxW) * 100 : 0;
+      const seg = document.createElement('div');
+      seg.className = 'bseg';
+      seg.style.cssText = `height:${h.toFixed(1)}%;background:var(--${r.scen.tint})`;
+      seg.title = `${r.scen.name} · Mo${r.rows[realIdx].m}: ${fmt(wealth)}`;
+      inner.appendChild(seg);
+    });
+    col.appendChild(inner);
+    const m = results[0].rows[realIdx].m;
+    const lbl = document.createElement('div');
+    lbl.className = 'bylbl';
+    lbl.innerHTML = m % 24 === 0 ? `Yr${Math.ceil(m/12)}` : '&nbsp;';
+    col.appendChild(lbl);
+    el.appendChild(col);
+  });
+}
+
+function renderCFChart(results){
+  const el = document.getElementById('cfChart');
+  el.innerHTML = '';
+  const stride = 2;
+  const maxCF = Math.max(...results.flatMap(r => r.rows.map(x => x.propCFTotal)), 1);
+  document.getElementById('cfLegend').innerHTML = results.map(r =>
+    `<div class="leg"><div class="leg-dot" style="background:var(--${r.scen.tint})"></div>${r.scen.name}</div>`
+  ).join('');
+  results[0].rows.filter((_,i)=>i%stride===0).forEach((_, idx) => {
+    const realIdx = idx * stride;
+    const col = document.createElement('div');
+    col.className = 'bcol';
+    const inner = document.createElement('div');
+    inner.className = 'binner';
+    results.forEach(r => {
+      const cf = r.rows[realIdx].propCFTotal;
+      const h = maxCF > 0 ? (cf / maxCF) * 100 : 0;
+      const seg = document.createElement('div');
+      seg.className = 'bseg';
+      seg.style.cssText = `height:${h.toFixed(1)}%;background:var(--${r.scen.tint})`;
+      seg.title = `${r.scen.name} · Mo${r.rows[realIdx].m}: ${fmt(cf)}/mo`;
+      inner.appendChild(seg);
+    });
+    col.appendChild(inner);
+    const m = results[0].rows[realIdx].m;
+    const lbl = document.createElement('div');
+    lbl.className = 'bylbl';
+    lbl.innerHTML = m % 24 === 0 ? `Yr${Math.ceil(m/12)}` : '&nbsp;';
+    col.appendChild(lbl);
+    el.appendChild(col);
+  });
+}
+
+/* =====================================================
+   TAB SWITCHING
+   ===================================================== */
+function sw(name){
+  const names = ['overview','scenarios','shared','chart'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+}
+
+/* =====================================================
+   MASTER UPDATE
+   ===================================================== */
+function update(){
+  const results = runAll();
+  renderScenStrip(results);
+  renderComparisonTable(results);
+  renderWealthChart(results);
+  renderCFChart(results);
+  // Update equity displays in config cards
+  SCENARIOS.forEach(s => {
+    const eq = document.getElementById('eq_' + s.id);
+    if(eq) eq.textContent = fmt(s.value - s.mortgage);
+  });
+}
+
+/* =====================================================
+   SAVE / LOAD / RESET (localStorage)
+   ===================================================== */
+const STORAGE_KEY = 'scenarioCompare_v1';
+
+function saveSettings(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({shared: SHARED, scenarios: SCENARIOS}));
+    showToast('Saved');
+  }catch(e){ showToast('Save failed'); }
+}
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(parsed.shared) Object.keys(parsed.shared).forEach(k => { if(k in SHARED) SHARED[k] = parsed.shared[k]; });
+    if(parsed.scenarios && Array.isArray(parsed.scenarios)){
+      parsed.scenarios.forEach(saved => {
+        const target = SCENARIOS.find(s => s.id === saved.id);
+        if(target) Object.assign(target, saved);
+      });
+    }
+  }catch(e){}
+}
+
+function resetSettings(){
+  if(!confirm('Reset all inputs to defaults?\nCannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function showToast(msg){
+  let t = document.getElementById('toast');
+  if(!t){
+    t = document.createElement('div'); t.id='toast';
+    t.style.cssText='position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#3dd68c;color:#000;padding:0.5rem 1.2rem;border-radius:20px;font-size:0.75rem;font-weight:600;font-family:Jost,sans-serif;z-index:999;transition:opacity 0.4s;letter-spacing:0.05em';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = '0', 2000);
+}
+
+/* =====================================================
+   BOOT
+   ===================================================== */
+loadSettings();
+renderScenConfig();
+renderShared();
+update();
+</script>
+</body>
+</html>
