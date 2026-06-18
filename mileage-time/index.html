@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mileage & Time">
+<meta name="theme-color" content="#ffffff">
+<title>Aspire · Mileage & Time Log</title>
+<style>
+  :root{
+    --bg:#ffffff; --card:#ffffff; --card2:#f6f8fb; --line:#e2e8f0;
+    --txt:#0f172a; --muted:#64748b; --accent:#2563eb; --accent2:#16a34a;
+    --danger:#dc2626; --chip:#f1f5f9; --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--txt);
+    font-size:16px; line-height:1.4; padding:0 0 48px;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:18px 16px;}
+  header{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;
+         padding-bottom:14px; border-bottom:1px solid var(--line);}
+  header h1{font-size:17px; font-weight:700; margin:0; letter-spacing:-.1px;}
+  .status{font-size:12px; color:var(--muted);}
+  .status b{color:var(--accent2);}
+  .status.off b{color:var(--muted);}
+
+  /* segmented toggle */
+  .seg{display:flex; background:var(--chip); border:1px solid var(--line);
+       border-radius:var(--radius); padding:4px; margin-bottom:16px;}
+  .seg button{flex:1; border:0; background:transparent; color:var(--muted);
+       font-size:14px; font-weight:600; letter-spacing:.2px; padding:11px 0; border-radius:10px;
+       cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+       transition:background .15s,color .15s;}
+  .seg button svg{width:17px; height:17px; stroke:currentColor; stroke-width:1.7;
+       fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none;}
+  .seg button.active{background:var(--accent); color:#fff;}
+
+  .card{background:var(--card); border:1px solid var(--line);
+        border-radius:var(--radius); padding:18px; margin-bottom:14px;
+        box-shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);}
+  label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px; font-weight:600;}
+  .field{margin-bottom:14px;}
+  input,select,textarea{
+    width:100%; background:var(--card2); border:1px solid var(--line); color:var(--txt);
+    border-radius:10px; padding:12px 12px; font-size:16px; font-family:inherit; outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  textarea{resize:vertical; min-height:64px;}
+  .row{display:flex; gap:10px;}
+  .row > .field{flex:1;}
+  .inline{display:flex; align-items:center; gap:10px;}
+  .inline input[type=checkbox]{width:22px; height:22px; accent-color:var(--accent);}
+  .inline label{margin:0; font-size:15px; color:var(--txt);}
+
+  .calc{background:var(--chip); border-radius:10px; padding:12px 14px; display:flex;
+        align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .calc span{color:var(--muted); font-size:13px;}
+  .calc b{font-size:20px;}
+
+  .btn{width:100%; border:0; border-radius:12px; padding:15px; font-size:16px;
+       font-weight:700; cursor:pointer; color:#fff; background:var(--accent2);}
+  .btn:active{transform:translateY(1px);}
+  .btn.secondary{background:transparent; border:1px solid var(--line); color:var(--muted);
+       font-weight:600; padding:11px; font-size:14px;}
+
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(80px);
+    background:var(--accent2); color:#fff; padding:13px 22px; border-radius:12px;
+    font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.4); opacity:0; transition:.28s; z-index:50;}
+  .toast.show{transform:translateX(-50%) translateY(0); opacity:1;}
+  .toast.err{background:var(--danger);}
+
+  .recent{margin-top:6px;}
+  .recent h2{font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;
+       margin:18px 0 8px; display:flex; justify-content:space-between; align-items:center;}
+  .recent h2 a{color:var(--accent); font-size:12px; text-transform:none; cursor:pointer; text-decoration:none;}
+  .entry{background:var(--card); border:1px solid var(--line); border-radius:10px;
+       padding:11px 13px; margin-bottom:8px; font-size:14px; display:flex; justify-content:space-between; gap:10px;}
+  .entry .meta{color:var(--muted); font-size:12px; margin-top:3px;}
+  .entry .tag{font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; align-self:flex-start;}
+  .tag.M{background:#dbeafe; color:#1e40af;}
+  .tag.T{background:#dcfce7; color:#166534;}
+  .entry .amt{font-weight:700; white-space:nowrap;}
+  .empty{color:var(--muted); font-size:13px; text-align:center; padding:14px;}
+  .pending{font-size:11px; color:#b45309;}
+  .footnote{color:var(--muted); font-size:11px; text-align:center; margin-top:22px; line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mileage &amp; Time Log</h1>
+    <div class="status" id="status">checking…</div>
+  </header>
+
+  <div class="seg">
+    <button id="tabM" class="active" onclick="setMode('mileage')" type="button">
+      <svg viewBox="0 0 24 24"><path d="M5 16V11l1.8-4.2A2 2 0 0 1 8.6 5.5h6.8a2 2 0 0 1 1.8 1.3L19 11v5"/><path d="M3 16h18"/><circle cx="7.5" cy="16.5" r="1.6"/><circle cx="16.5" cy="16.5" r="1.6"/></svg>Mileage</button>
+    <button id="tabT" onclick="setMode('time')" type="button">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg>Time</button>
+  </div>
+
+  <form id="form" onsubmit="return submitEntry(event)">
+    <div class="card">
+      <!-- shared -->
+      <div class="row">
+        <div class="field">
+          <label for="date">Date</label>
+          <input type="date" id="date" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="company">Company</label>
+          <select id="company" required>
+            <option value="" disabled selected>Select…</option>
+            <option>ANE — Aspire North East</option>
+            <option>MCR — M&amp;C Residential</option>
+            <option>ALM — Aspire Living Management</option>
+            <option>MCD — M&amp;C Developments NE</option>
+            <option>AGH — Aspire Group Holdings</option>
+            <option>226CR — 226 Chillingham Road</option>
+            <option>226P2 — 226 Chillingham Rd (Phase 2)</option>
+            <option>35AR — 35 Albert Road</option>
+            <option>42E — 42 The Esplanade</option>
+            <option>AMN — Aspire Midlands North</option>
+            <option>AWY — Aspire West Yorkshire</option>
+            <option>WRL — Westmorland Rd</option>
+            <option>CAPE — CAPE Investment Group</option>
+            <option>EHL — Elmire House</option>
+            <option>Other / personal</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="project">Property / Project</label>
+          <select id="project" onchange="onProjectChange()">
+            <option value="" disabled selected>Select…</option>
+          </select>
+          <input type="text" id="projectOther" placeholder="Type project name" autocomplete="off" style="display:none; margin-top:8px;">
+        </div>
+      </div>
+
+      <!-- MILEAGE fields -->
+      <div id="fM">
+        <div class="field inline" style="margin-bottom:14px;">
+          <input type="checkbox" id="roundtrip" onchange="recalc()">
+          <label for="roundtrip">Round trip (double the miles)</label>
+        </div>
+        <div class="row">
+          <div class="field"><label for="miles">Miles (one way)</label>
+            <input type="number" id="miles" inputmode="decimal" step="0.1" min="0" placeholder="0" oninput="recalc()"></div>
+          <div class="field"><label for="rate">Rate £/mile</label>
+            <input type="number" id="rate" inputmode="decimal" step="0.01" min="0" value="0.45" oninput="recalc()"></div>
+        </div>
+        <div class="field"><label for="purposeM">Purpose / notes</label>
+          <input type="text" id="purposeM" placeholder="Reason for the journey" autocomplete="off"></div>
+      </div>
+
+      <!-- TIME fields -->
+      <div id="fT" style="display:none;">
+        <div class="field"><label for="task">Task / work done</label>
+          <input type="text" id="task" placeholder="What you worked on" autocomplete="off"></div>
+        <div class="row">
+          <div class="field"><label for="hours">Hours</label>
+            <input type="number" id="hours" inputmode="decimal" step="0.25" min="0" placeholder="0" oninput="recalc()"></div>
+          <div class="field"><label for="hrate">Rate £/hour</label>
+            <input type="number" id="hrate" inputmode="decimal" step="1" min="0" placeholder="0" oninput="recalc()"></div>
+        </div>
+        <div class="field"><label for="notesT">Notes</label>
+          <textarea id="notesT" placeholder="Optional detail"></textarea></div>
+      </div>
+
+      <div class="calc"><span id="calcLbl">Amount</span><b id="amount">£0.00</b></div>
+      <button type="submit" class="btn" id="saveBtn">Save entry</button>
+    </div>
+  </form>
+
+  <div class="recent">
+    <h2>Recent <a id="csvLink" onclick="exportCSV()">Export CSV</a></h2>
+    <div id="entries"><div class="empty">No entries yet.</div></div>
+  </div>
+
+  <div class="footnote" id="foot"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIG — paste your Google Apps Script Web App URL here.
+   Leave blank to run in local-only mode (saved in this browser).
+============================================================ */
+const ENDPOINT = "";
+
+const KEY = "aspire_mileage_time_log_v1";
+let mode = "mileage";
+
+/* Property/Project list — pulled live from the ALDS Config sheet via the
+   Apps Script endpoint. This baked-in list (active projects) is the fallback
+   used before the endpoint is set or if it can't be reached. */
+const PROJECTS_FALLBACK = [
+  "053 — 42 The Esplanade",
+  "057 — 214-216 Westmorland Road",
+  "058 — 226 Chillingham Road Phase 2"
+];
+
+function populateProjects(list){
+  const sel = $("project");
+  const keep = sel.value;
+  sel.innerHTML = '<option value="" disabled>Select…</option>';
+  (list||[]).forEach(name=>{
+    const o=document.createElement("option"); o.value=name; o.textContent=name; sel.appendChild(o);
+  });
+  ["General / admin","Other…"].forEach(extra=>{
+    const o=document.createElement("option");
+    o.value = extra==="Other…" ? "__other__" : extra; o.textContent=extra; sel.appendChild(o);
+  });
+  // restore prior selection if it still exists, else leave on placeholder
+  if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;
+  else sel.selectedIndex = 0;
+}
+
+function onProjectChange(){
+  $("projectOther").style.display = $("project").value==="__other__" ? "" : "none";
+}
+
+function getProject(){
+  const v = $("project").value;
+  return v==="__other__" ? $("projectOther").value.trim() : v;
+}
+
+// Live-refresh the list from the ALDS Config sheet (JSONP — no CORS needed)
+function refreshProjects(){
+  if(!ENDPOINT) return;
+  const cb = "__alds_cb_" + Date.now();
+  const s = document.createElement("script");
+  const done = ()=>{ try{ delete window[cb]; }catch(e){} s.remove(); };
+  window[cb] = (data)=>{ if(Array.isArray(data) && data.length) populateProjects(data); done(); };
+  s.onerror = done;
+  s.src = ENDPOINT + (ENDPOINT.indexOf("?")>-1?"&":"?") + "action=projects&callback=" + cb;
+  document.body.appendChild(s);
+}
+
+function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function $(id){ return document.getElementById(id); }
+function money(n){ return "£" + (Math.round(n*100)/100).toFixed(2); }
+
+function setMode(m){
+  mode = m;
+  $("tabM").classList.toggle("active", m==="mileage");
+  $("tabT").classList.toggle("active", m==="time");
+  $("fM").style.display = m==="mileage" ? "" : "none";
+  $("fT").style.display = m==="time" ? "" : "none";
+  $("calcLbl").textContent = m==="mileage" ? "Claimable amount" : "Chargeable amount";
+  recalc();
+}
+
+function recalc(){
+  let amt = 0;
+  if(mode==="mileage"){
+    const miles = parseFloat($("miles").value)||0;
+    const rate  = parseFloat($("rate").value)||0;
+    const rt    = $("roundtrip").checked ? 2 : 1;
+    amt = miles*rate*rt;
+  } else {
+    amt = (parseFloat($("hours").value)||0) * (parseFloat($("hrate").value)||0);
+  }
+  $("amount").textContent = money(amt);
+  return amt;
+}
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; } }
+function save(list){ localStorage.setItem(KEY, JSON.stringify(list)); }
+
+function render(){
+  const list = load().slice().reverse().slice(0,12);
+  const el = $("entries");
+  if(!list.length){ el.innerHTML='<div class="empty">No entries yet.</div>'; return; }
+  el.innerHTML = list.map(e=>{
+    const tag = e.type==="mileage" ? "M" : "T";
+    const title = e.type==="mileage"
+        ? `${e.miles||0} miles${e.roundtrip?" (return)":""}${e.purpose?(" · "+e.purpose):""}`
+        : (e.task||"Time");
+    const sub = e.type==="mileage"
+        ? `${e.date} · ${e.miles||0} mi @ £${e.rate} · ${e.company||""} ${e.project?("· "+e.project):""}`
+        : `${e.date} · ${e.hours||0} h @ £${e.hrate||0} · ${e.company||""} ${e.project?("· "+e.project):""}`;
+    const pend = e.synced===false ? '<div class="pending">⏳ not yet sent to Sheet</div>' : '';
+    return `<div class="entry"><div><span class="tag ${tag}">${tag==="M"?"Mileage":"Time"}</span>
+       <div style="margin-top:5px;">${title}</div><div class="meta">${sub}</div>${pend}</div>
+       <div class="amt">${money(e.amount||0)}</div></div>`;
+  }).join("");
+}
+
+function toast(msg, err){
+  const t=$("toast"); t.textContent=msg; t.className="toast show"+(err?" err":"");
+  setTimeout(()=>{ t.className="toast"+(err?" err":""); }, 2600);
+}
+
+async function postToSheet(entry){
+  if(!ENDPOINT) return false;
+  try{
+    // text/plain avoids a CORS pre-flight; Apps Script reads e.postData.contents
+    await fetch(ENDPOINT, {method:"POST", mode:"no-cors",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(entry)});
+    return true; // no-cors hides the response; assume success if no throw
+  }catch(e){ return false; }
+}
+
+async function submitEntry(ev){
+  ev.preventDefault();
+  const base = {
+    ts:new Date().toISOString(), type:mode, date:$("date").value,
+    company:$("company").value, project:getProject(),
+    amount:recalc()
+  };
+  let entry;
+  if(mode==="mileage"){
+    if(!(parseFloat($("miles").value)>0)){ toast("Enter the miles",true); return false; }
+    entry = Object.assign(base,{
+      roundtrip:$("roundtrip").checked,
+      miles:parseFloat($("miles").value)||0, rate:parseFloat($("rate").value)||0,
+      purpose:$("purposeM").value.trim()
+    });
+  } else {
+    if(!(parseFloat($("hours").value)>0)){ toast("Enter the hours",true); return false; }
+    entry = Object.assign(base,{
+      task:$("task").value.trim(),
+      hours:parseFloat($("hours").value)||0, hrate:parseFloat($("hrate").value)||0,
+      notes:$("notesT").value.trim()
+    });
+  }
+  const sent = await postToSheet(entry);
+  entry.synced = ENDPOINT ? sent : null;
+  const list = load(); list.push(entry); save(list);
+  render();
+  toast(ENDPOINT ? (sent?"Saved to Sheet ✓":"Saved locally (Sheet unreachable)") : "Saved locally ✓", ENDPOINT && !sent);
+  // reset entry-specific fields, keep date/company/project for fast repeat entry
+  ["miles","purposeM","task","hours","notesT"].forEach(id=>{ if($(id)) $(id).value=""; });
+  $("roundtrip").checked=false; $("rate").value="0.45";
+  recalc();
+  return false;
+}
+
+function exportCSV(){
+  const list = load();
+  if(!list.length){ toast("Nothing to export",true); return; }
+  const cols=["ts","type","date","company","project","roundtrip","miles","rate","task","hours","hrate","amount"];
+  const esc=v=>{ v=(v==null?"":String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const csv=[cols.join(",")].concat(list.map(e=>cols.map(c=>esc(e[c])).join(","))).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="mileage-time-"+todayISO()+".csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// init
+$("date").value = todayISO();
+$("status").className = ENDPOINT ? "status" : "status off";
+$("status").innerHTML = ENDPOINT ? 'Sheet: <b>connected</b>' : 'Sheet: <b>local only</b>';
+$("foot").textContent = ENDPOINT
+  ? "Entries save to your Google Sheet and to this device. Export CSV is a backup."
+  : "Running in local-only mode. Add your Apps Script URL in the file to sync to Google Sheets.";
+populateProjects(PROJECTS_FALLBACK); refreshProjects();
+render(); recalc();
+</script>
+</body>
+</html>

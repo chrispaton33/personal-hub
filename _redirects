@@ -3,3 +3,7 @@
 /options           /options/index.html           200
 /wealth-growth     /wealth-growth/index.html     200
 /scenario-compare  /scenario-compare/index.html  200
+/utilities         /utilities/index.html         200
+/council-tax       /utilities/index.html         200
+/mileage-time      /mileage-time/index.html      200
+/mileage           /mileage-time/index.html      200
