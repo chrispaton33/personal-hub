@@ -193,7 +193,7 @@
    CONFIG — paste your Google Apps Script Web App URL here.
    Leave blank to run in local-only mode (saved in this browser).
 ============================================================ */
-const ENDPOINT = "";
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbzflaYunZJ5K8wm_miiMYSmOzj18XM9dou04hCdSapxnlCi2PCvRKV0izjBIB9nfvWG/exec";
 
 const KEY = "aspire_mileage_time_log_v1";
 let mode = "mileage";
@@ -299,15 +299,26 @@ function toast(msg, err){
   setTimeout(()=>{ t.className="toast"+(err?" err":""); }, 2600);
 }
 
-async function postToSheet(entry){
-  if(!ENDPOINT) return false;
-  try{
-    // text/plain avoids a CORS pre-flight; Apps Script reads e.postData.contents
-    await fetch(ENDPOINT, {method:"POST", mode:"no-cors",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify(entry)});
-    return true; // no-cors hides the response; assume success if no throw
-  }catch(e){ return false; }
+// Write via JSONP GET. A cross-origin POST to Apps Script gets redirected
+// and silently turns into a GET (the write never runs), so we use the same
+// JSONP transport that reliably reads the project list. The callback gives
+// us a real success/failure result.
+function postToSheet(entry){
+  return new Promise((resolve)=>{
+    if(!ENDPOINT){ resolve(false); return; }
+    const cb = "__log_" + Date.now() + "_" + Math.floor(Math.random()*1e4);
+    const s = document.createElement("script");
+    let tm;
+    const done = (okFlag)=>{ try{ delete window[cb]; }catch(e){} if(s.parentNode) s.remove(); clearTimeout(tm); resolve(okFlag); };
+    window[cb] = (r)=> done(!!(r && r.status === "ok"));
+    s.onerror = ()=> done(false);
+    const params = Object.keys(entry)
+      .map(k => encodeURIComponent(k) + "=" + encodeURIComponent(entry[k]==null ? "" : entry[k]))
+      .join("&");
+    s.src = ENDPOINT + (ENDPOINT.indexOf("?")>-1 ? "&" : "?") + "action=log&callback=" + cb + "&" + params;
+    document.body.appendChild(s);
+    tm = setTimeout(()=> done(false), 12000);
+  });
 }
 
 async function submitEntry(ev){
