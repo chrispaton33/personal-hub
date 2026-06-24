@@ -193,10 +193,26 @@
   }
   .expected-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1.2fr 40px;
+    grid-template-columns: 110px 2fr 1fr 1.2fr 40px;
     gap: 8px;
     align-items: center;
   }
+  .exp-type {
+    padding: 9px 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    text-align: center;
+    font-weight: 500;
+  }
+  .exp-type.inflow  { color: var(--green); border-color: var(--green); }
+  .exp-type.outflow { color: var(--red);   border-color: var(--red);   }
   .expected-row .remove-btn {
     background: transparent;
     border: 1px solid var(--border);
@@ -786,8 +802,16 @@ function applyDateChange() {
     renderExpectedList(existing.expected || []);
     if (!(existing.expected && existing.expected.length)) addExpectedRow();
   } else {
-    // no entry — make sure there's a blank expected row ready
-    if (!document.querySelectorAll('#expected-list .expected-row').length) addExpectedRow();
+    // No entry for this date yet. Pre-fill the expected list from the most
+    // recent prior entry — saves re-typing inflows/outflows that carry over
+    // week to week. Bank balances are left empty (always entered fresh).
+    const sorted = state.entries.slice().sort((a, b) => a.weekEnding.localeCompare(b.weekEnding));
+    const prev = sorted.filter(e => e.weekEnding < date).pop();
+    if (prev && Array.isArray(prev.expected) && prev.expected.length) {
+      renderExpectedList(prev.expected);
+    } else if (!document.querySelectorAll('#expected-list .expected-row').length) {
+      addExpectedRow();
+    }
   }
   markEntryStatus();
 }
@@ -852,12 +876,22 @@ function addExpectedRow(preset) {
   const wrap = document.getElementById('expected-list');
   const row = document.createElement('div');
   row.className = 'expected-row';
+  const type = preset?.type || 'inflow'; // legacy items default to inflow
   row.innerHTML = `
+    <select class="exp-type ${type}">
+      <option value="inflow"  ${type === 'inflow'  ? 'selected' : ''}>↑ Inflow</option>
+      <option value="outflow" ${type === 'outflow' ? 'selected' : ''}>↓ Outflow</option>
+    </select>
     <input type="text" placeholder="Source of Fund (e.g. Rent batch, HMRC refund)" value="${preset?.desc || ''}" />
     <div class="input-wrap"><span class="prefix">£</span><input type="number" step="0.01" class="with-prefix" placeholder="0.00" value="${preset?.amount ?? ''}" /></div>
     <input type="date" value="${preset?.date || ''}" />
     <button class="remove-btn" title="Remove">×</button>
   `;
+  const sel = row.querySelector('.exp-type');
+  sel.addEventListener('change', () => {
+    sel.classList.remove('inflow', 'outflow');
+    sel.classList.add(sel.value);
+  });
   row.querySelector('.remove-btn').addEventListener('click', () => row.remove());
   wrap.appendChild(row);
 }
@@ -872,9 +906,11 @@ function collectForm() {
   const expected = [];
   document.querySelectorAll('#expected-list .expected-row').forEach(r => {
     const [descEl, amountEl, dateEl] = r.querySelectorAll('input');
+    const typeEl = r.querySelector('.exp-type');
+    const type = (typeEl && typeEl.value === 'outflow') ? 'outflow' : 'inflow';
     const amt = amountEl.value === '' ? null : parseFloat(amountEl.value);
     if (descEl.value || amt || dateEl.value) {
-      expected.push({ desc: descEl.value, amount: amt, date: dateEl.value });
+      expected.push({ desc: descEl.value, amount: amt, date: dateEl.value, type });
     }
   });
   return { weekEnding, balances, expected };
@@ -947,7 +983,18 @@ function groupTotal(entry, group) {
     .reduce((s, a) => s + (entry.balances[a.key] || 0), 0);
 }
 function expectedTotal(entry) {
-  return (entry.expected || []).reduce((s, r) => s + (r.amount || 0), 0);
+  // Net pending = inflows − outflows. Items without a `type` field are
+  // treated as inflows for backwards compatibility with pre-2026-05 data.
+  return (entry.expected || []).reduce((s, r) => {
+    const amt = r.amount || 0;
+    return s + (r.type === 'outflow' ? -amt : amt);
+  }, 0);
+}
+function expectedInflowsTotal(entry) {
+  return (entry.expected || []).reduce((s, r) => s + ((r.type === 'outflow') ? 0 : (r.amount || 0)), 0);
+}
+function expectedOutflowsTotal(entry) {
+  return (entry.expected || []).reduce((s, r) => s + ((r.type === 'outflow') ? (r.amount || 0) : 0), 0);
 }
 
 function renderStats(entries) {
@@ -964,12 +1011,27 @@ function renderStats(entries) {
 
   const cards = [];
   cards.push({ highlight: true, label: 'Total Cash', value: fmtMoney(total), delta, deltaLabel: prev ? `vs ${fmtDate(prev.weekEnding)}` : '' });
+
+  // Projected cash = current total + net pending (inflows − outflows)
+  const inflowsT  = expectedInflowsTotal(latest);
+  const outflowsT = expectedOutflowsTotal(latest);
+  const netPending = inflowsT - outflowsT;
+  const projected = total + netPending;
+  cards.push({
+    highlight: true,
+    label: 'Projected Cash',
+    value: fmtMoney(projected),
+    delta: null,
+    deltaLabel: `↑ ${fmtMoney(inflowsT)} in · ↓ ${fmtMoney(outflowsT)} out`,
+  });
+
   ['MCR','ANE','MCD','ALM','Personal'].forEach(g => {
     const v = groupTotal(latest, g);
     const pv = prev ? groupTotal(prev, g) : null;
     cards.push({ label: g, value: fmtMoney(v), delta: pv !== null ? v - pv : null });
   });
-  cards.push({ label: 'Cash Expected', value: fmtMoney(expectedTotal(latest)), delta: null, deltaLabel: `${(latest.expected||[]).length} item${(latest.expected||[]).length===1?'':'s'}` });
+  const _itemCount = (latest.expected||[]).length;
+  cards.push({ label: 'Pending Net', value: fmtMoney(netPending), delta: null, deltaLabel: `${_itemCount} item${_itemCount===1?'':'s'}` });
 
   wrap.innerHTML = cards.map(c => {
     const deltaHtml = c.delta !== null && c.delta !== undefined
@@ -1076,12 +1138,23 @@ function renderExpectedBreakdown(entries) {
   if (!entries.length) { wrap.innerHTML = ''; return; }
   const latest = entries[entries.length - 1];
   const list = latest.expected || [];
-  if (!list.length) { wrap.innerHTML = '<div style="color:var(--muted);padding:10px 0;">No expected inflows recorded for this week.</div>'; return; }
-  let html = '<table><thead><tr><th>Source of Fund</th><th>Date Expected</th><th>Expected Amount</th></tr></thead><tbody>';
+  if (!list.length) { wrap.innerHTML = '<div style="color:var(--muted);padding:10px 0;">No pending inflows or outflows recorded for this week.</div>'; return; }
+  let html = '<table><thead><tr><th>Type</th><th>Source of Fund</th><th>Date Expected</th><th>Amount</th></tr></thead><tbody>';
   list.forEach(r => {
-    html += `<tr><td>${escapeHtml(r.desc || '—')}</td><td style="text-align:left;color:var(--muted)">${r.date ? fmtDate(r.date) : '—'}</td><td>${r.amount ? fmtMoney(r.amount) : '—'}</td></tr>`;
+    const isOut = r.type === 'outflow';
+    const tone  = isOut ? 'var(--red)' : 'var(--green)';
+    const label = isOut ? '↓ Out' : '↑ In';
+    const sign  = isOut ? '−' : '';
+    html += `<tr>
+      <td style="color:${tone};font-weight:500">${label}</td>
+      <td>${escapeHtml(r.desc || '—')}</td>
+      <td style="text-align:left;color:var(--muted)">${r.date ? fmtDate(r.date) : '—'}</td>
+      <td style="color:${tone}">${r.amount ? sign + fmtMoney(r.amount) : '—'}</td>
+    </tr>`;
   });
-  html += `<tr class="total-row"><td>Total expected</td><td></td><td>${fmtMoney(expectedTotal(latest))}</td></tr>`;
+  const _in  = expectedInflowsTotal(latest);
+  const _out = expectedOutflowsTotal(latest);
+  html += `<tr class="total-row"><td></td><td>Net pending (in − out)</td><td style="text-align:left;color:var(--muted)">↑ ${fmtMoney(_in)} · ↓ ${fmtMoney(_out)}</td><td>${fmtMoney(_in - _out)}</td></tr>`;
   html += '</tbody></table>';
   wrap.innerHTML = html;
 }
